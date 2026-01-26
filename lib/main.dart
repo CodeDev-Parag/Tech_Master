@@ -15,6 +15,9 @@ import 'data/repositories/category_repository.dart';
 import 'data/services/ai_service.dart';
 import 'data/repositories/note_repository.dart';
 
+import 'data/models/timetable.dart';
+import 'data/repositories/timetable_repository.dart';
+
 import 'data/services/local_ml_service.dart';
 import 'data/services/gamification_service.dart';
 import 'presentation/providers/providers.dart';
@@ -35,6 +38,7 @@ void main() async {
   Hive.registerAdapter(CategoryAdapter());
   Hive.registerAdapter(NoteAdapter());
   Hive.registerAdapter(UserStatsAdapter());
+  Hive.registerAdapter(ClassSessionAdapter());
 
   // Initialize repositories
   final taskRepo = TaskRepository();
@@ -45,6 +49,9 @@ void main() async {
 
   final noteRepo = NoteRepository();
   await noteRepo.init();
+
+  final timetableRepo = TimetableRepository();
+  await timetableRepo.init();
 
   // Initialize AI service
   final localMLService = LocalMLService();
@@ -70,6 +77,7 @@ void main() async {
         taskRepositoryProvider.overrideWithValue(taskRepo),
         categoryRepositoryProvider.overrideWithValue(categoryRepo),
         noteRepositoryProvider.overrideWithValue(noteRepo),
+        timetableRepositoryProvider.overrideWithValue(timetableRepo),
         aiServiceProvider.overrideWith((ref) => aiService),
         aiConfiguredProvider.overrideWith((ref) => aiService.isConfigured),
         gamificationServiceProvider.overrideWith((ref) => gamificationService),

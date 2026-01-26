@@ -20,6 +20,10 @@ import '../profile/profile_screen.dart';
 import '../notes/notes_screen.dart';
 import '../procrastination/procrastination_screen.dart';
 
+import '../../../data/models/timetable.dart';
+import '../../../data/repositories/timetable_repository.dart';
+import '../college/timetable_screen.dart';
+
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
 
@@ -255,7 +259,7 @@ class _HomeTab extends ConsumerWidget {
                   Expanded(
                     child: _QuickActionCard(
                       title: 'My Notes',
-                      description: 'Write & Export',
+                      description: 'Write/Export',
                       icon: Iconsax.note_1,
                       color: Colors.blueAccent,
                       onTap: () => Navigator.push(
@@ -265,11 +269,25 @@ class _HomeTab extends ConsumerWidget {
                       ),
                     ),
                   ),
-                  const SizedBox(width: 12),
+                  const SizedBox(width: 8),
                   Expanded(
                     child: _QuickActionCard(
-                      title: 'Stop Delay',
-                      description: 'Beat It Now',
+                      title: 'Timetable',
+                      description: 'Classes',
+                      icon: Iconsax.teacher,
+                      color: Colors.purpleAccent,
+                      onTap: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (context) => const TimetableScreen()),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: _QuickActionCard(
+                      title: 'No Procr.',
+                      description: 'Beat It',
                       icon: Iconsax.flash,
                       color: Colors.orangeAccent,
                       onTap: () => Navigator.push(
@@ -283,6 +301,17 @@ class _HomeTab extends ConsumerWidget {
                 ],
               ),
             ).animate().fadeIn(delay: 150.ms).slideY(begin: 0.1),
+          ),
+
+          const SliverToBoxAdapter(child: SizedBox(height: 24)),
+
+          // Up Next Class Widget
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: _UpNextClassWidget(
+                  repo: ref.watch(timetableRepositoryProvider)),
+            ).animate().fadeIn(delay: 180.ms).slideY(begin: 0.1),
           ),
 
           const SliverToBoxAdapter(child: SizedBox(height: 24)),
@@ -406,6 +435,101 @@ class _HomeTab extends ConsumerWidget {
   }
 }
 
+class _UpNextClassWidget extends StatelessWidget {
+  final TimetableRepository repo;
+
+  const _UpNextClassWidget({required this.repo});
+
+  @override
+  Widget build(BuildContext context) {
+    final nextClass = repo.getNextClass();
+
+    if (nextClass == null) return const SizedBox.shrink();
+
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            nextClass.color.withValues(alpha: 0.8),
+            nextClass.color,
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: nextClass.color.withValues(alpha: 0.3),
+            blurRadius: 10,
+            offset: const Offset(0, 5),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.2),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: const Icon(Iconsax.book, color: Colors.white, size: 28),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Up Next: ${nextClass.startTime.format(context)}',
+                  style: GoogleFonts.inter(
+                    color: Colors.white.withValues(alpha: 0.9),
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  nextClass.subjectName,
+                  style: GoogleFonts.inter(
+                    color: Colors.white,
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                if (nextClass.roomNumber != null)
+                  Text(
+                    'Room: ${nextClass.roomNumber}',
+                    style: GoogleFonts.inter(
+                      color: Colors.white.withValues(alpha: 0.8),
+                      fontSize: 12,
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.2),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Text(
+              'Class',
+              style: GoogleFonts.inter(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+                fontSize: 10,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _QuickActionCard extends StatelessWidget {
   final String title;
   final String description;
@@ -429,7 +553,7 @@ class _QuickActionCard extends StatelessWidget {
       onTap: onTap,
       borderRadius: BorderRadius.circular(20),
       child: Container(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
           color: theme.cardColor,
           borderRadius: BorderRadius.circular(20),
@@ -449,16 +573,20 @@ class _QuickActionCard extends StatelessWidget {
             const SizedBox(height: 12),
             Text(
               title,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
               style: GoogleFonts.inter(
                 fontWeight: FontWeight.bold,
-                fontSize: 16,
+                fontSize: 14,
               ),
             ),
             const SizedBox(height: 4),
             Text(
               description,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
               style: GoogleFonts.inter(
-                fontSize: 12,
+                fontSize: 11,
                 color: theme.textTheme.bodySmall?.color?.withValues(alpha: 0.6),
               ),
             ),
