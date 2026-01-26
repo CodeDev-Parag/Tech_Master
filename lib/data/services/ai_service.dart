@@ -40,7 +40,7 @@ class AIService extends ChangeNotifier {
   AIService(this._mlService);
 
   static const String systemRole = """
-You are the Task Master Architect, a senior software engineer and personal productivity coach. Your goal is to help me build the "Task Master" app—a goal-aware "Life OS"—while simultaneously helping me master JavaScript.
+You are the Task Master Architect, a senior software engineer and personal productivity coach. Your goal is to help me build the "Task Master" app—a goal-aware "Life OS"—while simultaneously guiding me to master any skill or subject I choose.
 
 Core Project Context:
 Project Name: Task Master (evolved from "Life OS").
@@ -49,13 +49,13 @@ Themes: High efficiency, hierarchical task structures, and an optional "Goku-ins
 
 My Technical Profile:
 Background: Java and Android development.
-Current Focus: Mastering JavaScript and web technologies.
+Current Focus: Master of Web Tech, JavaScript, and anything else that helps build the ultimate Life OS.
 
 Operational Rules:
 1. Atomic Planning: Whenever I ask for a plan or To-Do list, break it into steps that take <30 mins.
-2. Code Integration: Use JavaScript for web-related examples, but relate logic back to Java/Android knowledge.
-3. Goal-Awareness: Every task should serve the ultimate goal of finishing the Task Master app.
-4. Learning Path: Phase 1: Fundamentals (Data/Logic), Phase 2: DOM/Persistence (Local Storage), Phase 3: Async JS (APIs).
+2. Code/Technical Integration: Relate new concepts back to my existing knowledge (like Java/Android) whenever possible.
+3. Goal-Awareness: Every task should serve the ultimate goal of finishing the Task Master app or improving my life.
+4. Universal Learning: Apply a 3-phase progression to any subject: Phase 1: Core Fundamentals, Phase 2: Practical Application/Persistence, Phase 3: Mastery & Async Integration.
 """;
 
   // Always true now as we are running locally
@@ -88,14 +88,22 @@ Operational Rules:
     if (lower.contains('hello') ||
         lower.contains('hi') ||
         lower.contains('hey')) {
-      return "Greetings! I am the Task Master Architect. I'm ready to help you architect your Life OS and master JavaScript along the way. Since you have a background in Java/Android, you'll find JS both familiar and uniquely powerful. Which specific part of the Task Master app or our 3-phase JS plan shall we tackle first?";
+      return "Greetings! I am the Task Master Architect. I'm ready to help you architect your Life OS and master any skill you desire along the way. Whether it's the depths of JavaScript, the nuances of design, or any other world of knowledge, I will break it down for you. Which part of our Task Master project or what new subject shall we tackle first?";
     }
 
-    // JavaScript Learning Path
-    if (lower.contains('javascript') ||
-        lower.contains('js plan') ||
-        lower.contains('learn')) {
-      return "Excellent. We are following a 3-phase JS path:\n1. **Fundamentals**: Data/Logic (Think of this como Java syntax but looser!)\n2. **DOM/Persistence**: Local Storage (Like SharedPreferences but for the web)\n3. **Async JS**: APIs (Handling data streams)\n\nFor Task Master, we'll start with Phase 1 logic for our internal task structures.";
+    // Universal Learning Path
+    if (lower.contains('learn') ||
+        lower.contains('study') ||
+        lower.contains('how to')) {
+      // Extract subject if possible (heuristic)
+      String subject = "this new subject";
+      if (lower.contains('learn ')) {
+        subject = message.split('learn ').last.replaceFirst('?', '').trim();
+      } else if (lower.contains('study ')) {
+        subject = message.split('study ').last.replaceFirst('?', '').trim();
+      }
+
+      return "Excellent choice. To master **$subject**, we will follow my 3-phase Universal Learning Path:\n1. **Phase 1: Fundamentals**: Grasping the core axioms and syntax of the subject.\n2. **Phase 2: Application**: Bringing logic into reality through persistence and projects.\n3. **Phase 3: Integration**: Mastering complexity and async flows.\n\nI will generate atomic tasks (<30 mins) for you as we progress. Shall we start with Phase 1 for $subject?";
     }
 
     // Productivity and Procrastination
@@ -106,23 +114,23 @@ Operational Rules:
     }
 
     if (lower.contains('focus') || lower.contains('distraction')) {
-      return "Deep Work is key for a Senior Engineer. Schedule 90-minute blocks. The Pomodoro timer in Task Master is your 'Focus Room'. Use it to build that discipline.";
+      return "Focus is the currency of mastery. Schedule 90-minute blocks of Deep Work. The Pomodoro timer in Task Master is your 'Focus Room'. Use it to build that discipline.";
     }
 
     if (lower.contains('pattern') || lower.contains('habit')) {
-      return "Analysis shows you're most productive early! Let's schedule high-complexity JS logic for your morning sessions to maximize your output.";
+      return "Analyzing your productivity patterns shows you're most efficient when tasks are atomic. Let's keep our planning granular to maximize your output.";
     }
 
     if (lower.contains('note') || lower.contains('write')) {
-      return "Capture your architectural decisions in the Notes section. You can export them as PDFs—perfect for project documentation if you're hitting a hackathon soon!";
+      return "Capture your architectural decisions in the Notes section. You can export them as PDFs—perfect for project documentation for your next hackathon!";
     }
 
     if (lower.contains('help') || lower.contains('what can you do')) {
-      return "As your Architect, I can:\n1. Break down 'Life Goals' into atomic tasks.\n2. Guide your JavaScript learning path (Phase 1-3).\n3. Provide coding logic that bridges your Java/Android knowledge to Web/JS.\n4. Design combat strategies for procrastination.";
+      return "As your Architect, I can:\n1. Break down 'Life Goals' into atomic tasks.\n2. Guide your Mastery Path for any subject (Phase 1-3).\n3. Provide logic bridges between your existing knowledge and new fields.\n4. Design combat strategies for procrastination.";
     }
 
     // Default fallback
-    return "Understood. As your Architect, I suggest we keep our eyes on the goal: finishing Task Master. How does this request fit into our current development phase or your JS learning path?";
+    return "Understood. As your Architect, I suggest we keep our focus sharp. How does this request fit into our current development phase or your goal of building the ultimate Task Master app?";
   }
 
   /// Parses natural language input using Regex AND Local ML
@@ -258,24 +266,23 @@ Operational Rules:
         'Vacuum/Mopping'
       ];
     }
-    if (lower.contains('javascript') || lower.contains('code')) {
+    if (lower.contains('learn') ||
+        lower.contains('study') ||
+        lower.contains('master')) {
       return [
-        'Study basic syntax & variables',
-        'Understand functions & scope',
-        'Practice with arrays & objects',
-        'Build a small project'
-      ];
-    }
-    if (lower.contains('test') || lower.contains('exam')) {
-      return [
-        'Review study material',
-        'Create mock questions',
-        'Revise key concepts',
-        'Take a practice test'
+        'Phase 1: Research core fundamentals and axioms',
+        'Phase 2: Setup practice environment/workspace',
+        'Phase 3: Complete first practical application project',
+        'Phase 4: Review and iterate on complex concepts'
       ];
     }
 
-    return [];
+    return [
+      'Analyze requirements',
+      'Break down into atomic steps',
+      'Execute Phase 1',
+      'Review outcomes'
+    ];
   }
 
   Future<ProductivityInsight> getProductivityInsights(List<Task> tasks) async {
