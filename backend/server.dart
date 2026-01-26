@@ -57,9 +57,9 @@ void main() async {
       _collectedData.add(record);
 
       print('Received data packet! Total records: ${_collectedData.length}');
-      if (data is Map && data['data'] != null) {
-        print('Sample: ${(data['data'] as List).first}');
-      }
+
+      // Trigger simple aggregation log
+      _aggregateModel();
 
       return Response.ok(
           jsonEncode({'status': 'success', 'count': _collectedData.length}));
@@ -67,6 +67,13 @@ void main() async {
       print('Error processing request: $e');
       return Response.internalServerError(body: 'Invalid JSON');
     }
+  });
+
+  // Endpoint to get the Global Aggregated Model
+  router.get('/model', (Request request) {
+    final globalModel = _aggregateModel();
+    return Response.ok(jsonEncode(globalModel),
+        headers: {'Content-Type': 'application/json'});
   });
 
   // Endpoint to view collected data
@@ -90,4 +97,49 @@ void main() async {
   final port = int.parse(Platform.environment['PORT'] ?? '8080');
   final server = await shelf_io.serve(handler, InternetAddress.anyIPv4, port);
   print('Data Collection Server listening on port ${server.port}');
+}
+
+// Simple Federated Averaging / Aggregation Logic
+Map<String, dynamic> _aggregateModel() {
+  final categoryCounts = <String, Map<String, int>>{};
+  final priorityCounts = <String, Map<String, int>>{};
+
+  for (var record in _collectedData) {
+    try {
+      final rawData = record['data'];
+      if (rawData is! Map) continue;
+
+      final items = rawData['data'] as List;
+      for (var item in items) {
+        if (item['type'] == 'category_model') {
+          final cat = item['category'];
+          final word = item['word'];
+          final count = item['count'] as int;
+
+          categoryCounts.putIfAbsent(cat, () => {});
+          categoryCounts[cat]!
+              .update(word, (val) => val + count, ifAbsent: () => count);
+        } else if (item['type'] == 'priority_model') {
+          final prio = item['priority'];
+          final word = item['word'];
+          final count = item['count'] as int;
+
+          priorityCounts.putIfAbsent(prio, () => {});
+          priorityCounts[prio]!
+              .update(word, (val) => val + count, ifAbsent: () => count);
+        }
+      }
+    } catch (e) {
+      print('Skipping malformed record during aggregation');
+    }
+  }
+
+  // print('Aggregated Knowledge: ${categoryCounts.keys.length} categories, ${priorityCounts.keys.length} priorities.');
+
+  return {
+    'version': '1.0-global',
+    'generated_at': DateTime.now().toIso8601String(),
+    'categories': categoryCounts,
+    'priorities': priorityCounts,
+  };
 }
