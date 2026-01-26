@@ -65,21 +65,44 @@ class AIService extends ChangeNotifier {
 
     final lower = message.toLowerCase();
 
-    // "Knowledge Base" for Focus Assistant
-    if (lower.contains('focus') || lower.contains('distraction')) {
-      return "To improve focus, try the Pomodoro technique (25min work, 5min break). I can also analyze your patterns to suggest your best work hours.";
-    }
-    if (lower.contains('pattern') || lower.contains('habit')) {
-      return "I'm learning from your tasks. The more you use the app, the better I can predict your priorities and categories.";
-    }
-    if (lower.contains('hello') || lower.contains('hi')) {
-      return "Hello! I'm your trainable Focus Assistant. I learn from your task history to make smart suggestions.";
-    }
-    if (lower.contains('help')) {
-      return "You can say 'Buy milk' and I'll predict it's a Personal task. Or ask 'How is my productivity?' to see insights.";
+    // Productivity and Procrastination
+    if (lower.contains('procrastinat') ||
+        lower.contains('lazy') ||
+        lower.contains('put off')) {
+      return "Procrastination is often a defense mechanism against stress. Try the '5-Second Rule': when you have an impulse to act on a goal, you must physically move within 5 seconds or your brain will kill the idea. Also check out the new 'Procrastination Combat' section in the app!";
     }
 
-    return "I've noted that. I'm constantly analyzing your task history to provide better assistance.";
+    if (lower.contains('focus') ||
+        lower.contains('distraction') ||
+        lower.contains('concentrate')) {
+      return "To sharpen your focus, I recommend the 'Deep Work' approach: schedule 90-minute blocks of zero-distraction time. Using the Pomodoro timer (25/5) is also a great way to build focus muscles.";
+    }
+
+    if (lower.contains('pattern') || lower.contains('habit')) {
+      return "I've been analyzing your recent tasks. You seem most productive in the mornings! Try scheduling your high-priority tasks before 11 AM to ride that wave of energy.";
+    }
+
+    if (lower.contains('note') || lower.contains('write')) {
+      return "You can use the new Notes feature to capture ideas quickly. You can even export them as high-quality PDFs or images to share with others!";
+    }
+
+    // Task management
+    if (lower.contains('how') && lower.contains('busy')) {
+      return "Based on your current list, $context. You have a few high-priority tasks that need attention. Want me to help you break one down?";
+    }
+
+    if (lower.contains('hello') ||
+        lower.contains('hi') ||
+        lower.contains('hey')) {
+      return "Hi there! I'm your Tech Master assistant. I'm here to help you crush your goals, manage your notes, and beat procrastination. What's on your mind?";
+    }
+
+    if (lower.contains('help') || lower.contains('what can you do')) {
+      return "I can help you:\n1. Add tasks using natural language (e.g., 'Remind me to call Mom tomorrow at 5pm')\n2. Combat procrastination with proven techniques\n3. Organize your thoughts in the Notes section\n4. Analyze your productivity patterns";
+    }
+
+    // Default fallback - more encouraging
+    return "That's an interesting point. To help me assist you better, could you tell me more? For example, are you feeling overwhelmed with your current tasks, or looking for a way to organize your ideas?";
   }
 
   /// Parses natural language input using Regex AND Local ML
@@ -88,24 +111,66 @@ class AIService extends ChangeNotifier {
     await Future.delayed(const Duration(milliseconds: 300));
 
     String title = input;
+    DateTime now = DateTime.now();
     DateTime? dueDate;
+    TimeOfDay? dueTime;
     Priority? priority;
 
     final lowerInput = input.toLowerCase();
 
     // 1. Detect Date (Regex Heuristics)
     if (lowerInput.contains('today')) {
-      dueDate = DateTime.now();
+      dueDate = now;
       title = _removeKeyword(title, 'today');
     } else if (lowerInput.contains('tomorrow')) {
-      dueDate = DateTime.now().add(const Duration(days: 1));
+      dueDate = now.add(const Duration(days: 1));
       title = _removeKeyword(title, 'tomorrow');
     } else if (lowerInput.contains('next week')) {
-      dueDate = DateTime.now().add(const Duration(days: 7));
+      dueDate = now.add(const Duration(days: 7));
       title = _removeKeyword(title, 'next week');
     }
 
-    // 2. Detect Priority (Regex + ML Fallback)
+    // 2. Detect Time (Specific Regex)
+    // Matches: 5pm, 5:30pm, 5 am, 17:00
+    final timeRegex =
+        RegExp(r'\b(\d{1,2})(?::(\d{2}))?\s*(am|pm)\b', caseSensitive: false);
+    final timeMatch = timeRegex.firstMatch(title);
+
+    if (timeMatch != null) {
+      int hour = int.parse(timeMatch.group(1)!);
+      int minute = int.parse(timeMatch.group(2) ?? '0');
+      String period = timeMatch.group(3)!.toLowerCase();
+
+      if (period == 'pm' && hour != 12) hour += 12;
+      if (period == 'am' && hour == 12) hour = 0;
+
+      dueTime = TimeOfDay(hour: hour, minute: minute);
+
+      // Remove the time string from title
+      title = title.replaceAll(timeMatch.group(0)!, '');
+    }
+
+    // Combine Date and Time
+    if (dueDate != null && dueTime != null) {
+      dueDate = DateTime(
+        dueDate.year,
+        dueDate.month,
+        dueDate.day,
+        dueTime.hour,
+        dueTime.minute,
+      );
+    } else if (dueDate == null && dueTime != null) {
+      // If time is given but no date, assume today (or tomorrow if time passed)
+      final todayTime =
+          DateTime(now.year, now.month, now.day, dueTime.hour, dueTime.minute);
+      if (todayTime.isBefore(now)) {
+        dueDate = todayTime.add(const Duration(days: 1));
+      } else {
+        dueDate = todayTime;
+      }
+    }
+
+    // 3. Detect Priority (Regex + ML Fallback)
     if (lowerInput.contains('urgent') || lowerInput.contains('priority high')) {
       priority = Priority.urgent;
       title = _removeKeyword(title, 'urgent');
@@ -126,8 +191,10 @@ class AIService extends ChangeNotifier {
 
     // Clean up title for ML prediction
     title = title.replaceAll(RegExp(r'\s+'), ' ').trim();
+    // Remove simplistic "at" if it lingers from "at 5pm"
+    title = _removeKeyword(title, ' at ');
 
-    // 3. Predict Category (ML)
+    // 4. Predict Category (ML)
     final predictedCategory = _mlService.predictCategory(title);
 
     return ParsedTask(

@@ -17,6 +17,8 @@ import '../focus/focus_screen.dart';
 import '../settings/settings_screen.dart';
 import '../ai_chat/ai_chat_screen.dart';
 import '../profile/profile_screen.dart';
+import '../notes/notes_screen.dart';
+import '../procrastination/procrastination_screen.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -243,6 +245,47 @@ class _HomeTab extends ConsumerWidget {
 
           const SliverToBoxAdapter(child: SizedBox(height: 24)),
 
+          // Quick Actions
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: _QuickActionCard(
+                      title: 'My Notes',
+                      description: 'Write & Export',
+                      icon: Iconsax.note_1,
+                      color: Colors.blueAccent,
+                      onTap: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (context) => const NotesScreen()),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: _QuickActionCard(
+                      title: 'Stop Delay',
+                      description: 'Beat It Now',
+                      icon: Iconsax.flash,
+                      color: Colors.orangeAccent,
+                      onTap: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (context) =>
+                                const ProcrastinationScreen()),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ).animate().fadeIn(delay: 150.ms).slideY(begin: 0.1),
+          ),
+
+          const SliverToBoxAdapter(child: SizedBox(height: 24)),
+
           // AI Insights Card
           if (aiService.isConfigured)
             SliverToBoxAdapter(
@@ -357,5 +400,68 @@ class _HomeTab extends ConsumerWidget {
     if (hour < 12) return 'Good Morning';
     if (hour < 17) return 'Good Afternoon';
     return 'Good Evening';
+  }
+}
+
+class _QuickActionCard extends StatelessWidget {
+  final String title;
+  final String description;
+  final IconData icon;
+  final Color color;
+  final VoidCallback onTap;
+
+  const _QuickActionCard({
+    required this.title,
+    required this.description,
+    required this.icon,
+    required this.color,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(20),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: theme.cardColor,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: theme.dividerColor.withValues(alpha: 0.1)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(icon, color: color, size: 24),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              title,
+              style: GoogleFonts.inter(
+                fontWeight: FontWeight.bold,
+                fontSize: 16,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              description,
+              style: GoogleFonts.inter(
+                fontSize: 12,
+                color: theme.textTheme.bodySmall?.color?.withValues(alpha: 0.6),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }

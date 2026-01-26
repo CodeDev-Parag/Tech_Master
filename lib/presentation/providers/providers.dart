@@ -8,6 +8,9 @@ import '../../data/models/user_stats.dart';
 import '../../data/services/gamification_service.dart';
 import '../../data/services/pattern_analysis_service.dart';
 import '../../data/services/local_ml_service.dart';
+import '../../data/models/note.dart';
+import '../../data/repositories/note_repository.dart';
+import '../../data/services/note_export_service.dart';
 
 // Repository providers
 final taskRepositoryProvider = Provider<TaskRepository>((ref) {
@@ -16,6 +19,14 @@ final taskRepositoryProvider = Provider<TaskRepository>((ref) {
 
 final categoryRepositoryProvider = Provider<CategoryRepository>((ref) {
   return CategoryRepository();
+});
+
+final noteRepositoryProvider = Provider<NoteRepository>((ref) {
+  return NoteRepository();
+});
+
+final noteExportServiceProvider = Provider<NoteExportService>((ref) {
+  return NoteExportService();
 });
 
 final localMLServiceProvider = Provider<LocalMLService>((ref) {
@@ -171,3 +182,35 @@ final themeModeProvider =
 // Settings providers
 final aiConfiguredProvider = StateProvider<bool>((ref) => false);
 final autoCollectProvider = StateProvider<bool>((ref) => false);
+
+// Note providers
+final notesProvider = StateNotifierProvider<NotesNotifier, List<Note>>((ref) {
+  return NotesNotifier(ref.watch(noteRepositoryProvider));
+});
+
+class NotesNotifier extends StateNotifier<List<Note>> {
+  final NoteRepository _repository;
+
+  NotesNotifier(this._repository) : super([]) {
+    loadNotes();
+  }
+
+  void loadNotes() {
+    state = _repository.getAllNotes();
+  }
+
+  Future<void> addNote(Note note) async {
+    await _repository.addNote(note);
+    loadNotes();
+  }
+
+  Future<void> updateNote(Note note) async {
+    await _repository.updateNote(note);
+    loadNotes();
+  }
+
+  Future<void> deleteNote(String id) async {
+    await _repository.deleteNote(id);
+    loadNotes();
+  }
+}

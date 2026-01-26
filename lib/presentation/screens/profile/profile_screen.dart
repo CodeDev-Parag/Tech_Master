@@ -13,13 +13,13 @@ final usernameProvider = StateNotifierProvider<UsernameNotifier, String>((ref) {
 });
 
 class UsernameNotifier extends StateNotifier<String> {
-  UsernameNotifier() : super('Task Master') {
+  UsernameNotifier() : super('Tech Master') {
     _loadUsername();
   }
 
   Future<void> _loadUsername() async {
     final box = await Hive.openBox('settings');
-    state = box.get('username', defaultValue: 'Task Master');
+    state = box.get('username', defaultValue: 'Tech Master');
   }
 
   Future<void> setUsername(String name) async {
@@ -81,7 +81,7 @@ class ProfileScreen extends ConsumerWidget {
                   children: [
                     _buildStatItem(
                       theme,
-                      'Total Tasks',
+                      'Tech Master',
                       stats['total'].toString(),
                       Iconsax.task,
                       Colors.blue,

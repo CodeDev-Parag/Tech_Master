@@ -1,6 +1,6 @@
 class AppConstants {
   // App Info
-  static const String appName = 'Task Master';
+  static const String appName = 'Tech Master';
   static const String appVersion = '1.0.0';
 
   // Hive Box Names

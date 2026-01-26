@@ -98,7 +98,7 @@ class _SplashScreenState extends State<SplashScreen> {
 
               // App Name
               Text(
-                'Task Master',
+                'Tech Master',
                 style: GoogleFonts.inter(
                   fontSize: 36,
                   fontWeight: FontWeight.bold,

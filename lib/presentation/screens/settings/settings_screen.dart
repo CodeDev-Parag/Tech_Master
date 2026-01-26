@@ -242,7 +242,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
 **Last Updated: January 26, 2026**
 
-Your privacy is important to us. It is Task Master's policy to respect your privacy regarding any information we may collect from you across our application.
+Your privacy is important to us. It is Tech Master's policy to respect your privacy regarding any information we may collect from you across our application.
 
 **1. Information We Collect**
 We only ask for personal information when we truly need it to provide a service to you. We collect it by fair and lawful means, with your knowledge and consent. We also let you know why we’re collecting it and how it will be used.
@@ -279,20 +279,20 @@ We may update our Privacy Policy from time to time. Thus, you are advised to rev
 By downloading or using the app, these terms will automatically apply to you – you should make sure therefore that you read them carefully before using the app. You’re not allowed to copy or modify the app, any part of the app, or our trademarks in any way.
 
 **2. Use License**
-Permission is granted to use Task Master for personal, non-commercial purposes. This is the grant of a license, not a transfer of title, and under this license you may not:
+Permission is granted to use Tech Master for personal, non-commercial purposes. This is the grant of a license, not a transfer of title, and under this license you may not:
 - modify or copy the materials;
 - use the materials for any commercial purpose, or for any public display (commercial or non-commercial);
-- attempt to decompile or reverse engineer any software contained in Task Master;
+- attempt to decompile or reverse engineer any software contained in Tech Master;
 - remove any copyright or other proprietary notations from the materials; or
 - transfer the materials to another person or "mirror" the materials on any other server.
 
 **3. Disclaimer**
-The materials on Task Master are provided 'as is'. Task Master makes no warranties, expressed or implied, and hereby disclaims and negates all other warranties including, without limitation, implied warranties or conditions of merchantability, fitness for a particular purpose, or non-infringement of intellectual property or other violation of rights.
+The materials on Tech Master are provided 'as is'. Tech Master makes no warranties, expressed or implied, and hereby disclaims and negates all other warranties including, without limitation, implied warranties or conditions of merchantability, fitness for a particular purpose, or non-infringement of intellectual property or other violation of rights.
 
 **4. Limitations**
-In no event shall Task Master or its suppliers be liable for any damages (including, without limitation, damages for loss of data or profit, or due to business interruption) arising out of the use or inability to use the materials on Task Master, even if Task Master or a Task Master authorized representative has been notified orally or in writing of the possibility of such damage.
+In no event shall Tech Master or its suppliers be liable for any damages (including, without limitation, damages for loss of data or profit, or due to business interruption) arising out of the use or inability to use the materials on Tech Master, even if Tech Master or a Tech Master authorized representative has been notified orally or in writing of the possibility of such damage.
 
 **5. Accuracy of Materials**
-The materials appearing on Task Master could include technical, typographical, or photographic errors. Task Master does not warrant that any of the materials on its application are accurate, complete or current. We may make changes to the materials contained on its application at any time without notice.
+The materials appearing on Tech Master could include technical, typographical, or photographic errors. Tech Master does not warrant that any of the materials on its application are accurate, complete or current. We may make changes to the materials contained on its application at any time without notice.
 ''';
 }
