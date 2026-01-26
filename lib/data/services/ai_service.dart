@@ -77,18 +77,27 @@ Operational Rules:
 
   String? get apiKey => null;
 
+  String _getTimeGreeting() {
+    final hour = DateTime.now().hour;
+    if (hour >= 5 && hour < 12) return 'Good Morning';
+    if (hour >= 12 && hour < 17) return 'Good Afternoon';
+    if (hour >= 17 && hour < 21) return 'Good Evening';
+    return 'Good Night';
+  }
+
   /// Simulates a chat response using local logic
   Future<String> chat(String message, {String? context}) async {
     // Simulate thinking time
     await Future.delayed(const Duration(milliseconds: 600));
 
     final lower = message.toLowerCase();
+    final timeGreeting = _getTimeGreeting();
 
     // Persona Greeting
     if (lower.contains('hello') ||
         lower.contains('hi') ||
         lower.contains('hey')) {
-      return "Greetings! I am the Task Master Architect. I'm ready to help you architect your Life OS and master any skill you desire along the way. Whether it's the depths of JavaScript, the nuances of design, or any other world of knowledge, I will break it down for you. Which part of our Task Master project or what new subject shall we tackle first?";
+      return "$timeGreeting! I am the Task Master Architect. I'm ready to help you architect your Life OS and master any skill you desire along the way. Whether it's the depths of JavaScript, the nuances of design, or any other world of knowledge, I will break it down for you. Which part of our Task Master project or what new subject shall we tackle first?";
     }
 
     // Universal Learning Path
