@@ -7,15 +7,24 @@ import 'package:shelf_router/shelf_router.dart';
 // In-memory storage for demonstration
 final List<Map<String, dynamic>> _collectedData = [];
 
-// Simple CORS middleware
+// Robust CORS middleware
 Middleware corsMiddleware() {
   return (Handler innerHandler) {
     return (Request request) async {
+      if (request.method == 'OPTIONS') {
+        return Response.ok('', headers: {
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+          'Access-Control-Allow-Headers':
+              'Origin, Content-Type, Accept, Authorization',
+        });
+      }
       final response = await innerHandler(request);
       return response.change(headers: {
         'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-        'Access-Control-Allow-Headers': 'Origin, Content-Type',
+        'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+        'Access-Control-Allow-Headers':
+            'Origin, Content-Type, Accept, Authorization',
       });
     };
   };

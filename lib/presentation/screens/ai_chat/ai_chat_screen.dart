@@ -167,39 +167,92 @@ class _AIChatScreenState extends ConsumerState<AIChatScreen> {
   }
 
   Widget _buildEmptyState(ThemeData theme) {
+    final suggestions = [
+      'Add a task: "Buy milk tomorrow at 5pm"',
+      'Analyze my productivity',
+      'What should I distinguish today?',
+      'High priority tasks',
+    ];
+
     return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: theme.colorScheme.primary.withValues(alpha: 0.1),
-              shape: BoxShape.circle,
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: theme.colorScheme.primary.withValues(alpha: 0.1),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                Iconsax.message_question,
+                size: 48,
+                color: theme.colorScheme.primary,
+              ),
+            ).animate().scale(duration: 500.ms, curve: Curves.easeOutBack),
+            const SizedBox(height: 24),
+            Text(
+              'How can I help you today?',
+              style: GoogleFonts.inter(
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+                color: theme.textTheme.bodyLarge?.color,
+              ),
+            ).animate().fadeIn(delay: 200.ms),
+            const SizedBox(height: 32),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 32),
+              child: Column(
+                children: suggestions.asMap().entries.map((entry) {
+                  final index = entry.key;
+                  final text = entry.value;
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: InkWell(
+                      onTap: () {
+                        _controller.text = text;
+                        _sendMessage();
+                      },
+                      borderRadius: BorderRadius.circular(12),
+                      child: Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(
+                            vertical: 12, horizontal: 16),
+                        decoration: BoxDecoration(
+                          border: Border.all(
+                              color: theme.dividerColor.withValues(alpha: 0.5)),
+                          borderRadius: BorderRadius.circular(12),
+                          color: theme.cardColor,
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(Iconsax.message_text,
+                                size: 16,
+                                color: theme.colorScheme.primary
+                                    .withValues(alpha: 0.7)),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Text(
+                                text,
+                                style: GoogleFonts.inter(fontSize: 14),
+                              ),
+                            ),
+                            Icon(Iconsax.arrow_right_3,
+                                size: 16, color: theme.disabledColor),
+                          ],
+                        ),
+                      ),
+                    ),
+                  )
+                      .animate()
+                      .fadeIn(delay: (300 + (index * 100)).ms)
+                      .slideX(begin: 0.1, duration: 300.ms);
+                }).toList(),
+              ),
             ),
-            child: Icon(
-              Iconsax.message_question,
-              size: 48,
-              color: theme.colorScheme.primary,
-            ),
-          ).animate().scale(duration: 500.ms, curve: Curves.easeOutBack),
-          const SizedBox(height: 16),
-          Text(
-            'How can I help you today?',
-            style: GoogleFonts.inter(
-              fontSize: 18,
-              fontWeight: FontWeight.w600,
-              color: theme.textTheme.bodyLarge?.color,
-            ),
-          ).animate().fadeIn(delay: 200.ms),
-          const SizedBox(height: 8),
-          Text(
-            'Try "Add a meeting tomorrow" or "Plan my day"',
-            style: GoogleFonts.inter(
-              color: theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.6),
-            ),
-          ).animate().fadeIn(delay: 400.ms),
-        ],
+          ],
+        ),
       ),
     );
   }
