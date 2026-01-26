@@ -49,13 +49,15 @@ class _AIChatScreenState extends ConsumerState<AIChatScreen> {
 
       // Heuristic: Check if it looks like a task creation or planning request
       final lowerText = text.toLowerCase();
-      if (lowerText.startsWith('add') ||
+      final isTaskRelated = lowerText.startsWith('add') ||
           lowerText.startsWith('create') ||
           lowerText.contains('remind me') ||
           lowerText.contains('plan') ||
           lowerText.contains('want to') ||
           lowerText.contains('going to') ||
-          lowerText.contains('need to')) {
+          lowerText.contains('need to');
+
+      if (isTaskRelated) {
         final parsedTask = await aiService.parseNaturalLanguage(text);
 
         // Create Task from ParsedTask
@@ -77,11 +79,17 @@ class _AIChatScreenState extends ConsumerState<AIChatScreen> {
           }).toList(),
         );
 
-        // Add to provider (which will update the repository and UI)
+        // Add to provider
         await ref.read(tasksProvider.notifier).addTask(newTask);
 
+        // Get a conversational response too
         responseText =
-            "I've added that task for you:\n\n**${newTask.title}**\nDue: ${newTask.dueDate?.toString().split('.')[0] ?? 'No date'}";
+            await aiService.chat(text, context: "Added ${newTask.title}");
+
+        // Append task confirmation if response is too short
+        if (responseText.length < 50) {
+          responseText += "\n\nI've added **${newTask.title}** to your list.";
+        }
       } else {
         // Fallback to generic AI chat
         final tasks = ref.read(tasksProvider);
