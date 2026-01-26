@@ -1,0 +1,173 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../data/repositories/task_repository.dart';
+import '../../data/repositories/category_repository.dart';
+import '../../data/services/ai_service.dart';
+import '../../data/models/task.dart';
+import '../../data/models/category.dart';
+import '../../data/models/user_stats.dart';
+import '../../data/services/gamification_service.dart';
+import '../../data/services/pattern_analysis_service.dart';
+import '../../data/services/local_ml_service.dart';
+
+// Repository providers
+final taskRepositoryProvider = Provider<TaskRepository>((ref) {
+  return TaskRepository();
+});
+
+final categoryRepositoryProvider = Provider<CategoryRepository>((ref) {
+  return CategoryRepository();
+});
+
+final localMLServiceProvider = Provider<LocalMLService>((ref) {
+  return LocalMLService();
+});
+
+final aiServiceProvider = ChangeNotifierProvider<AIService>((ref) {
+  final mlService = ref.watch(localMLServiceProvider);
+  final service = AIService(mlService);
+  service.init();
+  return service;
+});
+
+final gamificationServiceProvider =
+    StateNotifierProvider<GamificationService, UserStats>((ref) {
+  return GamificationService();
+});
+
+final patternAnalysisServiceProvider = Provider<PatternAnalysisService>((ref) {
+  return PatternAnalysisService();
+});
+
+// Task providers
+final tasksProvider = StateNotifierProvider<TasksNotifier, List<Task>>((ref) {
+  return TasksNotifier(
+    ref.watch(taskRepositoryProvider),
+    ref,
+  );
+});
+
+class TasksNotifier extends StateNotifier<List<Task>> {
+  final TaskRepository _repository;
+  final Ref _ref;
+
+  TasksNotifier(this._repository, this._ref) : super([]) {
+    loadTasks();
+  }
+
+  void loadTasks() {
+    state = _repository.getAllTasks();
+  }
+
+  List<Task> get todaysTasks => _repository.getTodaysTasks();
+  List<Task> get overdueTasks => _repository.getOverdueTasks();
+  List<Task> get upcomingTasks => _repository.getUpcomingTasks();
+
+  Future<void> addTask(Task task) async {
+    await _repository.addTask(task);
+    loadTasks();
+    _triggerLearning();
+  }
+
+  Future<void> updateTask(Task task) async {
+    await _repository.updateTask(task);
+    loadTasks();
+    _triggerLearning();
+  }
+
+  Future<void> deleteTask(String id) async {
+    await _repository.deleteTask(id);
+    loadTasks();
+    _triggerLearning();
+  }
+
+  Future<void> toggleTaskStatus(String id) async {
+    await _repository.toggleTaskStatus(id);
+    loadTasks();
+    _triggerLearning();
+  }
+
+  Future<void> toggleSubTask(String taskId, String subTaskId) async {
+    await _repository.toggleSubTask(taskId, subTaskId);
+    loadTasks();
+  }
+
+  void _triggerLearning() {
+    // 1. Re-train Local Model with new data
+    final tasks = state;
+    final aiService = _ref.read(aiServiceProvider);
+    aiService.trainModel(tasks);
+
+    // 2. Sync if "Continuous Learning" is enabled
+    final autoCollect = _ref.read(autoCollectProvider);
+    if (autoCollect) {
+      final mlService = _ref.read(localMLServiceProvider);
+      // Fire and forget - don't await to avoid blocking UI
+      mlService.syncTrainingData();
+    }
+  }
+
+  List<Task> filterByStatus(TaskStatus status) {
+    return state.where((t) => t.status == status).toList();
+  }
+
+  List<Task> filterByCategory(String categoryId) {
+    return state.where((t) => t.categoryId == categoryId).toList();
+  }
+
+  List<Task> filterByPriority(Priority priority) {
+    return state.where((t) => t.priority == priority).toList();
+  }
+
+  Map<String, dynamic> get statistics => _repository.getStatistics();
+  List<Map<String, dynamic>> get completionHistory =>
+      _repository.getCompletionHistory();
+}
+
+// Category providers
+final categoriesProvider =
+    StateNotifierProvider<CategoriesNotifier, List<Category>>((ref) {
+  return CategoriesNotifier(ref.watch(categoryRepositoryProvider));
+});
+
+class CategoriesNotifier extends StateNotifier<List<Category>> {
+  final CategoryRepository _repository;
+
+  CategoriesNotifier(this._repository) : super([]) {
+    loadCategories();
+  }
+
+  void loadCategories() {
+    state = _repository.getAllCategories();
+  }
+
+  Future<void> addCategory(Category category) async {
+    await _repository.addCategory(category);
+    loadCategories();
+  }
+
+  Future<void> updateCategory(Category category) async {
+    await _repository.updateCategory(category);
+    loadCategories();
+  }
+
+  Future<void> deleteCategory(String id) async {
+    await _repository.deleteCategory(id);
+    loadCategories();
+  }
+
+  Category? getCategoryById(String id) {
+    try {
+      return state.firstWhere((c) => c.id == id);
+    } catch (e) {
+      return null;
+    }
+  }
+}
+
+// Theme provider
+final themeModeProvider =
+    StateProvider<bool>((ref) => true); // true = dark mode
+
+// Settings providers
+final aiConfiguredProvider = StateProvider<bool>((ref) => false);
+final autoCollectProvider = StateProvider<bool>((ref) => false);
