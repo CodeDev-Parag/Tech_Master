@@ -47,10 +47,15 @@ class _AIChatScreenState extends ConsumerState<AIChatScreen> {
 
       String responseText;
 
-      // Heuristic: Check if it looks like a task creation request
-      if (text.toLowerCase().startsWith('add') ||
-          text.toLowerCase().startsWith('create') ||
-          text.toLowerCase().contains('remind me')) {
+      // Heuristic: Check if it looks like a task creation or planning request
+      final lowerText = text.toLowerCase();
+      if (lowerText.startsWith('add') ||
+          lowerText.startsWith('create') ||
+          lowerText.contains('remind me') ||
+          lowerText.contains('plan') ||
+          lowerText.contains('want to') ||
+          lowerText.contains('going to') ||
+          lowerText.contains('need to')) {
         final parsedTask = await aiService.parseNaturalLanguage(text);
 
         // Create Task from ParsedTask

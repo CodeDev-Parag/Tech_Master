@@ -86,6 +86,17 @@ class AIService extends ChangeNotifier {
       return "You can use the new Notes feature to capture ideas quickly. You can even export them as high-quality PDFs or images to share with others!";
     }
 
+    if (lower.contains('javascript') ||
+        lower.contains('code') ||
+        lower.contains('learn') ||
+        lower.contains('study')) {
+      return "Learning a new skill requires a solid plan! For your request, I recommend breaking it down: Day 1: Fundamentals & Syntax, Day 2: Advanced Topics & Projects. I've analyzed this and added it to your tasks.";
+    }
+
+    if (lower.contains('plan')) {
+      return "Planning is the first step to success. I'll help you break this down into manageable subtasks. Check your task list for a detailed breakdown!";
+    }
+
     // Task management
     if (lower.contains('how') && lower.contains('busy')) {
       return "Based on your current list, $context. You have a few high-priority tasks that need attention. Want me to help you break one down?";
@@ -128,6 +139,15 @@ class AIService extends ChangeNotifier {
     } else if (lowerInput.contains('next week')) {
       dueDate = now.add(const Duration(days: 7));
       title = _removeKeyword(title, 'next week');
+    } else {
+      // Handle "in X days"
+      final daysRegex = RegExp(r'in (\d+) days');
+      final daysMatch = daysRegex.firstMatch(lowerInput);
+      if (daysMatch != null) {
+        final days = int.parse(daysMatch.group(1)!);
+        dueDate = now.add(Duration(days: days));
+        title = _removeKeyword(title, daysMatch.group(0)!);
+      }
     }
 
     // 2. Detect Time (Specific Regex)
@@ -227,6 +247,22 @@ class AIService extends ChangeNotifier {
         'De-clutter',
         'Wipe surfaces',
         'Vacuum/Mopping'
+      ];
+    }
+    if (lower.contains('javascript') || lower.contains('code')) {
+      return [
+        'Study basic syntax & variables',
+        'Understand functions & scope',
+        'Practice with arrays & objects',
+        'Build a small project'
+      ];
+    }
+    if (lower.contains('test') || lower.contains('exam')) {
+      return [
+        'Review study material',
+        'Create mock questions',
+        'Revise key concepts',
+        'Take a practice test'
       ];
     }
 

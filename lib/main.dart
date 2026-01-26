@@ -11,6 +11,8 @@ import 'data/models/category.dart';
 import 'data/repositories/task_repository.dart';
 import 'data/repositories/category_repository.dart';
 import 'data/services/ai_service.dart';
+import 'data/models/note.dart';
+import 'data/repositories/note_repository.dart';
 
 import 'data/services/local_ml_service.dart';
 import 'presentation/providers/providers.dart';
@@ -29,6 +31,7 @@ void main() async {
   Hive.registerAdapter(SubTaskAdapter());
   Hive.registerAdapter(TaskAdapter());
   Hive.registerAdapter(CategoryAdapter());
+  Hive.registerAdapter(NoteAdapter());
   // Hive.registerAdapter(UserStatsAdapter()); // Temporarily disabled
 
   // Initialize repositories
@@ -37,6 +40,9 @@ void main() async {
 
   final categoryRepo = CategoryRepository();
   await categoryRepo.init();
+
+  final noteRepo = NoteRepository();
+  await noteRepo.init();
 
   // Initialize AI service
   final localMLService = LocalMLService();
@@ -61,17 +67,18 @@ void main() async {
       overrides: [
         taskRepositoryProvider.overrideWithValue(taskRepo),
         categoryRepositoryProvider.overrideWithValue(categoryRepo),
+        noteRepositoryProvider.overrideWithValue(noteRepo),
         aiServiceProvider.overrideWith((ref) => aiService),
         aiConfiguredProvider.overrideWith((ref) => aiService.isConfigured),
         // gamificationServiceProvider.overrideWith((ref) => gamificationService), // Temporarily disabled
       ],
-      child: const TaskMasterApp(),
+      child: const TechMasterApp(),
     ),
   );
 }
 
-class TaskMasterApp extends ConsumerWidget {
-  const TaskMasterApp({super.key});
+class TechMasterApp extends ConsumerWidget {
+  const TechMasterApp({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
