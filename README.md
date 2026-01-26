@@ -1,16 +1,18 @@
-# Task Master AI 🧠✅
+# Tech Master AI 🧠✅
 
-**Task Master** is an intelligent, privacy-focused task management application that uses **Local Machine Learning** to predict task categories and priorities. It features a modern, premium "Dark Mode" aesthetic and offers optional federated learning to improve its intelligence over time.
+**Tech Master** is an intelligent, privacy-focused productivity system that uses **Local Machine Learning** to predict task categories and priorities. It features a modern, premium aesthetic, note-taking capabilities, and scientifically-backed procrastination combat techniques.
 
-![Task Master App Icon](assets/images/app_icon.png)
+![Tech Master App Icon](assets/images/app_icon.png)
 
 ## ✨ Key Features
 
 *   **Diffused Intelligence:** Runs a Naive Bayes classifier *entirely on-device* to predict task metadata (Category & Priority) from natural language.
-*   **Natural Language Parsing:** Type "Buy milk tomorrow at 5pm" and the app auto-extracts the Date, Time, and Task Title.
-*   **Smart Suggestions:** The AI Chat Assistant suggests actions based on your task history and current workload.
-*   **Privacy First:** All personal data stays on your device. Only anonymized "model weights" (word counts) are shared if you opt-in to Continuous Learning.
-*   **Federated Learning Backend:** A Dart-based backend collects anonymized insights to build a global "Super Model" that improves the app for everyone.
+*   **Natural Language Parsing:** Type "Buy milk tomorrow at 5pm" or "Plan javascript in 2 days" and the app auto-extracts time and creates structured tasks.
+*   **Conversational AI Assistant:** Suggests actions based on your task history and helps you build learning plans.
+*   **Note-taking & Export:** Capture ideas and export them as high-quality **Images** or **PDFs**.
+*   **Procrastination Combat:** Dedicated section with techniques like the **5-Second Rule**, **Pomodoro**, and **Eat the Frog**.
+*   **Privacy First:** All personal data stays on your device. Only anonymized "model weights" are shared if you opt-in.
+*   **Federated Learning Backend:** A Dart-based backend collects anonymized insights to build a global "Super Model".
 *   **Gamification:** Earn streaks and productivity scores as you complete tasks.
 
 ## 🛠 Tech Stack
