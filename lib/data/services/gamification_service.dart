@@ -14,39 +14,54 @@ class GamificationService extends StateNotifier<UserStats> {
   }
 
   Future<void> awardXp(int amount) async {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+
     int newXp = state.currentXp + amount;
     int newLevel = state.currentLevel;
-    int tasksCompleted =
-        state.tasksCompleted + 1; // Assuming usually called on completion
+    int tasksCompleted = state.tasksCompleted + 1;
+    int streakSteps = state.streakDays;
+
+    // Streak Logic
+    if (state.lastActivityDate == null) {
+      streakSteps = 1;
+    } else {
+      final lastDate = DateTime(
+        state.lastActivityDate!.year,
+        state.lastActivityDate!.month,
+        state.lastActivityDate!.day,
+      );
+      final diff = today.difference(lastDate).inDays;
+
+      if (diff == 1) {
+        streakSteps++;
+      } else if (diff > 1) {
+        streakSteps = 1;
+      }
+      // if diff == 0, keep current streak
+    }
 
     // Level Up Logic
-    // If we have enough XP for next level
-    // Logic: Required for Next Level = Level * 100
-    // If XP exceeds required, level up and reduce XP (or keep cumulative?)
-    // Let's use cumulative for the level, but reset bar?
-    // Usually: Level 1 (0-100), Level 2 (0-200).
-    // Implementation:
-    // while (newXp >= newLevel * 100)
     int required = newLevel * 100;
     while (newXp >= required) {
       newXp -= required;
       newLevel++;
       required = newLevel * 100;
-      // Could trigger "Level Up" event here?
     }
 
     final newState = state.copyWith(
       currentLevel: newLevel,
       currentXp: newXp,
       tasksCompleted: tasksCompleted,
-      lastActivityDate: DateTime.now(),
+      streakDays: streakSteps,
+      lastActivityDate: now,
     );
 
     state = newState;
     await _box?.put('stats', newState);
   }
 
-  // Simplified: +10 XP for task
+  // Improved: +10 XP for task
   Future<void> completeTask() async {
     await awardXp(10);
   }

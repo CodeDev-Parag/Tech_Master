@@ -226,6 +226,7 @@ class _FocusScreenState extends ConsumerState<FocusScreen> {
                 ),
                 const SizedBox(width: 24),
                 FloatingActionButton.large(
+                  heroTag: 'focus_fab',
                   onPressed: _toggleTimer,
                   backgroundColor:
                       _isFocusMode ? theme.colorScheme.primary : Colors.green,

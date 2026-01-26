@@ -107,6 +107,19 @@ class ProfileScreen extends ConsumerWidget {
                       Iconsax.chart_2,
                       Colors.purple,
                     ),
+                    Consumer(
+                      builder: (context, ref, child) {
+                        final userStats =
+                            ref.watch(gamificationServiceProvider);
+                        return _buildStatItem(
+                          theme,
+                          'Daily Streak',
+                          '${userStats.streakDays} Days',
+                          Iconsax.flash,
+                          Colors.orange,
+                        );
+                      },
+                    ),
                   ],
                 ).animate().fadeIn(delay: 300.ms).slideY(begin: 0.1);
               },

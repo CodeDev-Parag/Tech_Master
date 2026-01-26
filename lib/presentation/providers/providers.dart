@@ -94,6 +94,13 @@ class TasksNotifier extends StateNotifier<List<Task>> {
   Future<void> toggleTaskStatus(String id) async {
     await _repository.toggleTaskStatus(id);
     loadTasks();
+
+    // Check if the task was just completed
+    final task = state.firstWhere((t) => t.id == id);
+    if (task.status == TaskStatus.completed) {
+      _ref.read(gamificationServiceProvider.notifier).completeTask();
+    }
+
     _triggerLearning();
   }
 

@@ -47,6 +47,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         ],
       ),
       floatingActionButton: FloatingActionButton(
+        heroTag: 'home_fab',
         onPressed: () => _showAddTaskSheet(context),
         child: const Icon(Iconsax.add, size: 28),
       )

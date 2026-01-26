@@ -39,6 +39,7 @@ class _NotesScreenState extends ConsumerState<NotesScreen> {
               },
             ),
       floatingActionButton: FloatingActionButton.extended(
+        heroTag: 'notes_fab',
         onPressed: () => _openNoteEditor(context, ref),
         label: const Text('Add Note'),
         icon: const Icon(Iconsax.add_square),

@@ -2,7 +2,7 @@ import 'package:hive/hive.dart';
 
 part 'user_stats.g.dart';
 
-@HiveType(typeId: 3)
+@HiveType(typeId: 6)
 class UserStats {
   @HiveField(0)
   int currentLevel;

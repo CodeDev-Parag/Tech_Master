@@ -5,7 +5,7 @@ class NoteRepository {
   static const String _boxName = 'notes_box';
 
   Future<void> init() async {
-    if (!Hive.isAdapterRegistered(4)) {
+    if (!Hive.isAdapterRegistered(7)) {
       // NoteAdapter will be generated
     }
     await Hive.openBox<Note>(_boxName);

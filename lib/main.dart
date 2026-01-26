@@ -7,14 +7,16 @@ import 'core/constants/app_constants.dart';
 import 'core/theme/app_theme.dart';
 import 'data/models/task.dart';
 import 'data/models/category.dart';
+import 'data/models/user_stats.dart';
+import 'data/models/note.dart';
 
 import 'data/repositories/task_repository.dart';
 import 'data/repositories/category_repository.dart';
 import 'data/services/ai_service.dart';
-import 'data/models/note.dart';
 import 'data/repositories/note_repository.dart';
 
 import 'data/services/local_ml_service.dart';
+import 'data/services/gamification_service.dart';
 import 'presentation/providers/providers.dart';
 import 'presentation/screens/splash/splash_screen.dart';
 
@@ -32,7 +34,7 @@ void main() async {
   Hive.registerAdapter(TaskAdapter());
   Hive.registerAdapter(CategoryAdapter());
   Hive.registerAdapter(NoteAdapter());
-  // Hive.registerAdapter(UserStatsAdapter()); // Temporarily disabled
+  Hive.registerAdapter(UserStatsAdapter());
 
   // Initialize repositories
   final taskRepo = TaskRepository();
@@ -52,9 +54,9 @@ void main() async {
   // Train AI on existing data immediately
   aiService.trainModel(taskRepo.getAllTasks());
 
-  // Initialize Gamification service (Temporarily disabled)
-  // final gamificationService = GamificationService();
-  // await gamificationService.init();
+  // Initialize Gamification service
+  final gamificationService = GamificationService();
+  await gamificationService.init();
 
   // Set preferred orientations
   await SystemChrome.setPreferredOrientations([
@@ -70,7 +72,7 @@ void main() async {
         noteRepositoryProvider.overrideWithValue(noteRepo),
         aiServiceProvider.overrideWith((ref) => aiService),
         aiConfiguredProvider.overrideWith((ref) => aiService.isConfigured),
-        // gamificationServiceProvider.overrideWith((ref) => gamificationService), // Temporarily disabled
+        gamificationServiceProvider.overrideWith((ref) => gamificationService),
       ],
       child: const TechMasterApp(),
     ),

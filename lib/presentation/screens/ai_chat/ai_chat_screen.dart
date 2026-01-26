@@ -403,6 +403,7 @@ class _AIChatScreenState extends ConsumerState<AIChatScreen> {
             ),
             const SizedBox(width: 12),
             FloatingActionButton(
+              heroTag: 'ai_chat_fab',
               onPressed: _sendMessage,
               mini: true,
               elevation: 0,
