@@ -14,7 +14,8 @@ class AppConstants {
   static const String notificationsEnabled = 'notifications_enabled';
 
   // Data Collection Backend URL (10.0.2.2 is localhost for Android Emulator)
-  static const String dataCollectionServerUrl = 'http://10.0.2.2:8080/collect';
+  static const String dataCollectionServerUrl =
+      'https://task-master-backend-qupx.onrender.com/collect';
 
   // Default Categories
   static const List<Map<String, dynamic>> defaultCategories = [
