@@ -105,8 +105,8 @@ class MainActivity : FlutterActivity() {
                                 return@setMethodCallHandler
                             }
 
-                            val systemPrompt = "You are a helpful AI assistant named Task Master. Answer clearly and concisely in English only."
-                            val fullPrompt = "$systemPrompt\n\nUser: $prompt"
+                            val systemPrompt = "System: You are a Productivity Architect, a high-performance coach focused on deep work, time-blocking, and the 80/20 rule. Rules: 1. Suggest actionable steps. 2. Prioritize tasks. 3. Be concise and use bullet points. 4. Discourage multitasking."
+                            val fullPrompt = "$systemPrompt\n$prompt"
                             val formattedPrompt = "<start_of_turn>user\n$fullPrompt\n<end_of_turn>model\n"
                             
                             isGenerating = true
