@@ -1,25 +1,27 @@
-# Use official Dart image
-FROM dart:stable AS build
+FROM python:3.11-slim
 
-# Resolve app dependencies.
+# Install system dependencies (curl for Ollama)
+RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
+
+# Install Ollama
+RUN curl -fsSL https://ollama.com/install.sh | sh
+
+# Set working directory
 WORKDIR /app
-COPY pubspec.* ./
-RUN dart pub get
 
-# Copy app source code.
-COPY . .
+# Install Python dependencies
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
 
-# Ensure packages are still there.
-RUN dart pub get --offline
+# Copy logic
+COPY server.py .
 
-# Compile a self-contained executable.
-RUN dart compile exe server.dart -o server
+# Startup script to handle Ollama + FastAPI
+COPY start.sh .
+RUN chmod +x start.sh
 
-# Build a minimal docker image.
-FROM scratch
-COPY --from=build /runtime/ /
-COPY --from=build /app/server /app/bin/
+# Environment variables
+ENV PORT=8000
+ENV OLLAMA_HOST=0.0.0.0
 
-# Start server.
-EXPOSE 8080
-CMD ["/app/bin/server"]
+CMD ["./start.sh"]

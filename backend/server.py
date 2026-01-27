@@ -14,7 +14,7 @@ from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.docstore.document import Document
 
 # --- Configuration ---
-MODEL_NAME = "llama3" # Or "mistral", "gemma:2b"
+MODEL_NAME = os.getenv("AI_MODEL", "llama3") # e.g. "phi3", "tinyllama"
 EMBEDDING_MODEL = "nomic-embed-text" # Or use same as model if supported, but nomic is better
 
 app = FastAPI(title="Task Master AI Backend")

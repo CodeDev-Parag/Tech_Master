@@ -83,8 +83,17 @@ Rules:
     if (!_settingsRepo.useCustomServer) return;
 
     try {
-      final ip = _settingsRepo.serverIp;
-      final url = Uri.parse('http://$ip:8000/train');
+      String baseUrl = _settingsRepo.serverIp;
+      // Normalization: Ensure valid URI
+      if (!baseUrl.startsWith('http')) {
+        baseUrl = 'http://$baseUrl:8000'; // Default to local format if just IP
+      }
+      // Remove trailing slash if present
+      if (baseUrl.endsWith('/')) {
+        baseUrl = baseUrl.substring(0, baseUrl.length - 1);
+      }
+
+      final url = Uri.parse('$baseUrl/train');
 
       final taskList = tasks
           .map((t) => {
@@ -197,8 +206,15 @@ Rules:
     if (_settingsRepo.useCustomServer) {
       // 1. Server Mode
       try {
-        final ip = _settingsRepo.serverIp;
-        final url = Uri.parse('http://$ip:8000/chat');
+        String baseUrl = _settingsRepo.serverIp;
+        if (!baseUrl.startsWith('http')) {
+          baseUrl = 'http://$baseUrl:8000';
+        }
+        if (baseUrl.endsWith('/')) {
+          baseUrl = baseUrl.substring(0, baseUrl.length - 1);
+        }
+
+        final url = Uri.parse('$baseUrl/chat');
 
         // Check if message is JSON (hack for direct RAG tests) or just text
         final body = jsonEncode({'message': message});

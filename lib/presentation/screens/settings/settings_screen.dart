@@ -303,12 +303,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Server IP Address'),
+        title: const Text('Server URL'),
         content: TextField(
           controller: controller,
           decoration: const InputDecoration(
-            hintText: 'e.g., 192.168.1.10',
-            labelText: 'IP Address',
+            hintText: 'https://my-app.onrender.com',
+            labelText: 'Server URL',
           ),
         ),
         actions: [
