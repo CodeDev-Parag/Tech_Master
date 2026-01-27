@@ -103,9 +103,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   theme,
                   icon: Iconsax.cpu,
                   iconColor: Colors.purpleAccent,
-                  title: 'AI Mode',
+                  title: 'Local AI Mode',
                   subtitle: ref.watch(aiModeProvider)
-                      ? 'Local LLM (Gemma 2B) - Offline'
+                      ? 'On-Device (Gemma 2B)'
                       : 'Classic (Rule-Based)',
                   trailing: Switch(
                     value: ref.watch(aiModeProvider),
@@ -114,6 +114,42 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     },
                   ),
                 ),
+                Divider(color: theme.dividerColor, height: 1),
+                _settingsTile(
+                  theme,
+                  icon: Icons.dns,
+                  iconColor: Colors.orangeAccent,
+                  title: 'Python Backend Server',
+                  subtitle: ref.watch(customServerModeProvider)
+                      ? 'Enabled (${ref.watch(serverIpProvider)})'
+                      : 'Disabled',
+                  trailing: Switch(
+                    value: ref.watch(customServerModeProvider),
+                    onChanged: (value) {
+                      ref.read(customServerModeProvider.notifier).toggle(value);
+                    },
+                  ),
+                ),
+                if (ref.watch(customServerModeProvider)) ...[
+                  Divider(color: theme.dividerColor, height: 1),
+                  _settingsTile(
+                    theme,
+                    icon: Iconsax.edit,
+                    iconColor: Colors.green,
+                    title: 'Set Server IP',
+                    subtitle: ref.watch(serverIpProvider),
+                    onTap: () => _showServerIpDialog(context, ref),
+                  ),
+                  Divider(color: theme.dividerColor, height: 1),
+                  _settingsTile(
+                    theme,
+                    icon: Iconsax.refresh,
+                    iconColor: Colors.blue,
+                    title: 'Sync Data to Server',
+                    subtitle: 'Send Tasks/Notes to Python RAG',
+                    onTap: () => _syncDataToServer(context, ref),
+                  ),
+                ]
               ],
             ).animate().fadeIn(delay: 250.ms).slideY(begin: 0.1),
 
@@ -260,6 +296,54 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         ],
       ),
     );
+  }
+
+  void _showServerIpDialog(BuildContext context, WidgetRef ref) {
+    final controller = TextEditingController(text: ref.read(serverIpProvider));
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Server IP Address'),
+        content: TextField(
+          controller: controller,
+          decoration: const InputDecoration(
+            hintText: 'e.g., 192.168.1.10',
+            labelText: 'IP Address',
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () {
+              ref.read(serverIpProvider.notifier).update(controller.text);
+              Navigator.pop(context);
+            },
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _syncDataToServer(BuildContext context, WidgetRef ref) async {
+    final aiService = ref.read(aiServiceProvider);
+    final tasks = ref.read(tasksProvider);
+    final notes = ref.read(notesProvider);
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Syncing data to Python Server...')),
+    );
+
+    await aiService.syncData(tasks, notes);
+
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Sync request sent! Check server logs.')),
+      );
+    }
   }
 
   final String _privacyPolicyText = '''

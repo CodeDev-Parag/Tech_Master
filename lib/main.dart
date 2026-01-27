@@ -79,7 +79,7 @@ void main() async {
 
   // Initialize AI service
   final localMLService = LocalMLService();
-  final aiService = AIService(localMLService);
+  final aiService = AIService(localMLService, settingsRepo);
   try {
     await aiService.init();
   } catch (e) {

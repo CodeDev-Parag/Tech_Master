@@ -27,4 +27,19 @@ class SettingsRepository {
   Future<void> setLocalLlmMode(bool isLocal) async {
     await _box.put(keyAiMode, isLocal);
   }
+
+  // Custom Server Settings
+  static const String keyServerIp = 'server_ip';
+  static const String keyUseCustomServer = 'use_custom_server';
+
+  // Default to localhost for emulator (10.0.2.2) or typical PC IP
+  String get serverIp => _box.get(keyServerIp, defaultValue: '192.168.1.10');
+  Future<void> setServerIp(String ip) async {
+    await _box.put(keyServerIp, ip);
+  }
+
+  bool get useCustomServer => _box.get(keyUseCustomServer, defaultValue: false);
+  Future<void> setUseCustomServer(bool enabled) async {
+    await _box.put(keyUseCustomServer, enabled);
+  }
 }

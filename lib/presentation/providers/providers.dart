@@ -40,7 +40,8 @@ final localMLServiceProvider = Provider<LocalMLService>((ref) {
 
 final aiServiceProvider = ChangeNotifierProvider<AIService>((ref) {
   final mlService = ref.watch(localMLServiceProvider);
-  final service = AIService(mlService);
+  final settingsRepo = ref.watch(settingsRepositoryProvider);
+  final service = AIService(mlService, settingsRepo);
   service.init();
   return service;
 });
@@ -221,6 +222,35 @@ class AiModeNotifier extends StateNotifier<bool> {
   void toggle(bool isLocal) {
     state = isLocal;
     _repo.setLocalLlmMode(isLocal);
+  }
+}
+
+final serverIpProvider = StateNotifierProvider<ServerIpNotifier, String>((ref) {
+  return ServerIpNotifier(ref.watch(settingsRepositoryProvider));
+});
+
+class ServerIpNotifier extends StateNotifier<String> {
+  final SettingsRepository _repo;
+  ServerIpNotifier(this._repo) : super(_repo.serverIp);
+
+  void update(String ip) {
+    state = ip;
+    _repo.setServerIp(ip);
+  }
+}
+
+final customServerModeProvider =
+    StateNotifierProvider<CustomServerModeNotifier, bool>((ref) {
+  return CustomServerModeNotifier(ref.watch(settingsRepositoryProvider));
+});
+
+class CustomServerModeNotifier extends StateNotifier<bool> {
+  final SettingsRepository _repo;
+  CustomServerModeNotifier(this._repo) : super(_repo.useCustomServer);
+
+  void toggle(bool enabled) {
+    state = enabled;
+    _repo.setUseCustomServer(enabled);
   }
 }
 

@@ -2,7 +2,11 @@ import 'package:flutter/material.dart';
 import '../models/task.dart';
 import 'local_ml_service.dart';
 import '../../core/services/llm_service.dart';
+import '../repositories/settings_repository.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 import 'dart:async';
+import '../models/note.dart';
 
 class ParsedTask {
   final String title;
@@ -38,9 +42,10 @@ class ProductivityInsight {
 
 class AIService extends ChangeNotifier {
   final LocalMLService _mlService;
+  final SettingsRepository _settingsRepo;
   final LlmService _llmService = LlmService();
 
-  AIService(this._mlService);
+  AIService(this._mlService, this._settingsRepo);
 
   static const String systemRole = """
 You are a Productivity Architect, a high-performance coach focused on deep work, time-blocking, and the 80/20 rule.
@@ -69,10 +74,49 @@ Rules:
 
   bool get isLLMReady => _llmService.isInitialized;
 
-  /// Trains the local AI model on the user's dataset
   void trainModel(List<Task> tasks) {
     _mlService.train(tasks);
     notifyListeners();
+  }
+
+  Future<void> syncData(List<Task> tasks, List<Note> notes) async {
+    if (!_settingsRepo.useCustomServer) return;
+
+    try {
+      final ip = _settingsRepo.serverIp;
+      final url = Uri.parse('http://$ip:8000/train');
+
+      final taskList = tasks
+          .map((t) => {
+                'title': t.title,
+                'description': t.description ?? "",
+                'status': t.status.toString().split('.').last,
+                'priority': t.priority.toString().split('.').last,
+                'date': t.dueDate?.toIso8601String() ?? "None",
+              })
+          .toList();
+
+      final noteList = notes.map((n) => n.content).toList();
+
+      final body = jsonEncode({
+        'tasks': taskList,
+        'notes': noteList,
+      });
+
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: body,
+      );
+
+      if (response.statusCode == 200) {
+        debugPrint('Sync successful: ${response.body}');
+      } else {
+        debugPrint('Sync failed: ${response.statusCode}');
+      }
+    } catch (e) {
+      debugPrint('Sync error: $e');
+    }
   }
 
   String _getTimeGreeting() {
@@ -150,10 +194,53 @@ Rules:
 
   /// Streaming chat response
   Stream<String> chatStream(String message, {bool isLocalMode = true}) async* {
-    if (isLocalMode && isLLMReady) {
+    if (_settingsRepo.useCustomServer) {
+      // 1. Server Mode
+      try {
+        final ip = _settingsRepo.serverIp;
+        final url = Uri.parse('http://$ip:8000/chat');
+
+        // Check if message is JSON (hack for direct RAG tests) or just text
+        final body = jsonEncode({'message': message});
+
+        final request = http.Request('POST', url);
+        request.headers['Content-Type'] = 'application/json';
+        request.body = body;
+
+        final response = await http.Client().send(request);
+
+        if (response.statusCode == 200) {
+          final stream = response.stream.transform(utf8.decoder);
+          await for (final chunk in stream) {
+            // For simple JSON response: {"response": "text"}
+            // We can parse it, or if server serves text stream.
+            // Our current server returns JSON. Let's parse it wholly for now,
+            // but to support streaming properly, the server should yield text.
+            // Since server.py returns {"response": "text"}, we wait for full.
+            // To simulate streaming UI, we yield words.
+
+            try {
+              final data = jsonDecode(chunk);
+              if (data['response'] != null) {
+                final words = (data['response'] as String).split(' ');
+                for (final word in words) {
+                  await Future.delayed(const Duration(milliseconds: 30));
+                  yield "$word ";
+                }
+              }
+            } catch (_) {
+              // May be partial chunk
+            }
+          }
+        }
+      } catch (e) {
+        yield "Server Error: $e. Using local fallback.";
+      }
+    } else if (isLocalMode && isLLMReady) {
+      // 2. Local LLM (Gemma)
       yield* _llmService.generateResponseStream(message);
     } else {
-      // Fallback to Rule-Based Logic
+      // 3. Fallback to Rule-Based Logic
       final fullResponse = await chat(message);
 
       // Simulate typing effect
