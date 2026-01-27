@@ -11,6 +11,8 @@ import '../../data/services/local_ml_service.dart';
 import '../../data/models/note.dart';
 import '../../data/repositories/note_repository.dart';
 import '../../data/services/note_export_service.dart';
+import '../../data/repositories/settings_repository.dart';
+import '../../core/services/secure_storage_service.dart';
 
 // Repository providers
 final taskRepositoryProvider = Provider<TaskRepository>((ref) {
@@ -29,13 +31,22 @@ final noteExportServiceProvider = Provider<NoteExportService>((ref) {
   return NoteExportService();
 });
 
+final settingsRepositoryProvider = Provider<SettingsRepository>((ref) {
+  return SettingsRepository();
+});
+
 final localMLServiceProvider = Provider<LocalMLService>((ref) {
   return LocalMLService();
 });
 
+final secureStorageServiceProvider = Provider<SecureStorageService>((ref) {
+  return SecureStorageService();
+});
+
 final aiServiceProvider = ChangeNotifierProvider<AIService>((ref) {
   final mlService = ref.watch(localMLServiceProvider);
-  final service = AIService(mlService);
+  final secureStorage = ref.watch(secureStorageServiceProvider);
+  final service = AIService(mlService, secureStorage);
   service.init();
   return service;
 });
@@ -187,8 +198,37 @@ final themeModeProvider =
     StateProvider<bool>((ref) => true); // true = dark mode
 
 // Settings providers
+// Settings providers
 final aiConfiguredProvider = StateProvider<bool>((ref) => false);
-final autoCollectProvider = StateProvider<bool>((ref) => false);
+
+final autoCollectProvider =
+    StateNotifierProvider<AutoCollectNotifier, bool>((ref) {
+  return AutoCollectNotifier(ref.watch(settingsRepositoryProvider));
+});
+
+class AutoCollectNotifier extends StateNotifier<bool> {
+  final SettingsRepository _repo;
+  AutoCollectNotifier(this._repo) : super(_repo.continuousLearningEnabled);
+
+  void toggle(bool value) {
+    state = value;
+    _repo.setContinuousLearning(value);
+  }
+}
+
+final aiModeProvider = StateNotifierProvider<AiModeNotifier, bool>((ref) {
+  return AiModeNotifier(ref.watch(settingsRepositoryProvider));
+});
+
+class AiModeNotifier extends StateNotifier<bool> {
+  final SettingsRepository _repo;
+  AiModeNotifier(this._repo) : super(_repo.isLocalLlmMode);
+
+  void toggle(bool isLocal) {
+    state = isLocal;
+    _repo.setLocalLlmMode(isLocal);
+  }
+}
 
 // Note providers
 final notesProvider = StateNotifierProvider<NotesNotifier, List<Note>>((ref) {

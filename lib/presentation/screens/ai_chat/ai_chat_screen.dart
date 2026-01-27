@@ -41,11 +41,7 @@ class _AIChatScreenState extends ConsumerState<AIChatScreen> {
 
     try {
       final aiService = ref.read(aiServiceProvider);
-      // For now, we reuse the existing parsing logic but wrap it to look like chat
-      // Ideally, we'd have a conversational endpoint.
-      // Let's assume the user wants to perform actions.
-
-      String responseText;
+      final isLocalMode = ref.read(aiModeProvider);
 
       // Heuristic: Check if it looks like a task creation or planning request
       final lowerText = text.toLowerCase();
@@ -58,9 +54,9 @@ class _AIChatScreenState extends ConsumerState<AIChatScreen> {
           lowerText.contains('need to');
 
       if (isTaskRelated) {
+        // NON-STREAMING Path for complex task parsing (needs full context)
         final parsedTask = await aiService.parseNaturalLanguage(text);
 
-        // Create Task from ParsedTask
         final newTask = Task(
           id: const Uuid().v4(),
           title: parsedTask.title,
@@ -79,37 +75,40 @@ class _AIChatScreenState extends ConsumerState<AIChatScreen> {
           }).toList(),
         );
 
-        // Add to provider
         await ref.read(tasksProvider.notifier).addTask(newTask);
 
-        // Get a conversational response too
-        responseText =
-            await aiService.chat(text, context: "Added ${newTask.title}");
-
-        // Append task confirmation if response is too short
-        if (responseText.length < 50) {
-          responseText += "\n\nI've added **${newTask.title}** to your list.";
-        }
+        // Add a simple confirmation message directly
+        setState(() {
+          _messages.add(ChatMessage(
+              text: "I've added **${newTask.title}** to your list.",
+              isUser: false));
+          _isTyping = false;
+        });
+        _scrollToBottom();
       } else {
-        // Fallback to generic AI chat
-        final tasks = ref.read(tasksProvider);
-        final pendingCount =
-            tasks.where((t) => t.status == TaskStatus.pending).length;
-        final overdueCount = tasks.where((t) => t.isOverdue).length;
-        final todaysCount =
-            ref.read(taskRepositoryProvider).getTodaysTasks().length;
+        // STREAMING Path for Chat
+        // 1. Add placeholder message
+        setState(() {
+          _messages.add(ChatMessage(text: "", isUser: false));
+        });
 
-        final contextStr =
-            "Pending: $pendingCount, Overdue: $overdueCount, Due Today: $todaysCount.";
+        // 2. Stream response
+        final stream = aiService.chatStream(text, isLocalMode: isLocalMode);
+        final StringBuffer buffer = StringBuffer();
 
-        responseText = await aiService.chat(text, context: contextStr);
+        await for (final chunk in stream) {
+          buffer.write(chunk);
+          setState(() {
+            _messages.last =
+                ChatMessage(text: buffer.toString(), isUser: false);
+          });
+          _scrollToBottom();
+        }
+
+        setState(() {
+          _isTyping = false;
+        });
       }
-
-      setState(() {
-        _messages.add(ChatMessage(text: responseText, isUser: false));
-        _isTyping = false;
-      });
-      _scrollToBottom();
     } catch (e) {
       setState(() {
         _messages.add(ChatMessage(

@@ -1,4 +1,5 @@
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:flutter/foundation.dart'; // For kIsWeb
 import 'package:timezone/data/latest_all.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
 import 'package:flutter_timezone/flutter_timezone.dart';
@@ -11,8 +12,10 @@ class NotificationService {
       FlutterLocalNotificationsPlugin();
 
   static Future<void> initializeNotification() async {
+    if (kIsWeb) return; // Skip on Web to prevent hanging
     tz.initializeTimeZones();
-    final String timeZoneName = await FlutterTimezone.getLocalTimezone();
+    final String timeZoneName = await FlutterTimezone.getLocalTimezone()
+        .timeout(const Duration(seconds: 3), onTimeout: () => 'UTC');
     try {
       tz.setLocalLocation(tz.getLocation(timeZoneName));
     } catch (e) {

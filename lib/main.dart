@@ -20,10 +20,12 @@ import 'data/repositories/timetable_repository.dart';
 
 import 'data/models/subject_attendance.dart';
 import 'data/repositories/attendance_repository.dart';
+import 'data/repositories/settings_repository.dart';
 
 import 'data/services/local_ml_service.dart';
 import 'data/services/gamification_service.dart';
 import 'core/services/notification_service.dart';
+import 'core/services/secure_storage_service.dart';
 import 'presentation/providers/providers.dart';
 import 'presentation/screens/splash/splash_screen.dart';
 
@@ -58,23 +60,42 @@ void main() async {
   final timetableRepo = TimetableRepository();
   await timetableRepo.init();
 
-  // Initialize Notifications
-  await NotificationService.initializeNotification();
-
-  // Initial rescheduling  // Ensure all session notifications are scheduled
-  await timetableRepo.rescheduleAll();
-  await timetableRepo.syncSubjectsWithAttendance(); // Sync attendance subjects
+  final settingsRepo = SettingsRepository();
+  await settingsRepo.init();
 
   final attendanceRepo = AttendanceRepository();
   await attendanceRepo.init();
 
+  // Initialize Services safely
+  try {
+    // Initialize Notifications
+    await NotificationService.initializeNotification();
+
+    // Initial rescheduling
+    await timetableRepo.rescheduleAll();
+    await timetableRepo.syncSubjectsWithAttendance();
+  } catch (e) {
+    debugPrint('Error initializing services: $e');
+  }
+
+  // Initialize Secure Storage
+  final secureStorage = SecureStorageService();
+
   // Initialize AI service
   final localMLService = LocalMLService();
-  final aiService = AIService(localMLService);
-  await aiService.init();
+  final aiService = AIService(localMLService, secureStorage);
+  try {
+    await aiService.init();
+  } catch (e) {
+    debugPrint('Error initializing AI service: $e');
+  }
 
   // Train AI on existing data immediately
-  aiService.trainModel(taskRepo.getAllTasks());
+  try {
+    aiService.trainModel(taskRepo.getAllTasks());
+  } catch (e) {
+    debugPrint('Error training AI: $e');
+  }
 
   // Initialize Gamification service
   final gamificationService = GamificationService();
@@ -94,6 +115,7 @@ void main() async {
         noteRepositoryProvider.overrideWithValue(noteRepo),
         timetableRepositoryProvider.overrideWithValue(timetableRepo),
         attendanceRepositoryProvider.overrideWithValue(attendanceRepo),
+        settingsRepositoryProvider.overrideWithValue(settingsRepo),
         aiServiceProvider.overrideWith((ref) => aiService),
         aiConfiguredProvider.overrideWith((ref) => aiService.isConfigured),
         gamificationServiceProvider.overrideWith((ref) => gamificationService),

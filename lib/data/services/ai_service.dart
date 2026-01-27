@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import '../models/task.dart';
 import 'local_ml_service.dart';
 import '../../core/services/llm_service.dart';
+import '../../core/services/secure_storage_service.dart';
+import 'package:google_generative_ai/google_generative_ai.dart';
+import 'dart:async';
 
 class ParsedTask {
   final String title;
@@ -37,9 +40,10 @@ class ProductivityInsight {
 
 class AIService extends ChangeNotifier {
   final LocalMLService _mlService;
+  final SecureStorageService _secureStorage;
   final LlmService _llmService = LlmService();
 
-  AIService(this._mlService);
+  AIService(this._mlService, this._secureStorage);
 
   static const String systemRole = """
 You are the Task Master Architect, a senior software engineer and personal productivity coach. Your goal is to help me build the "Task Master" app—a goal-aware "Life OS"—while simultaneously guiding me to master any skill or subject I choose.
@@ -84,10 +88,13 @@ Operational Rules:
   }
 
   Future<void> setApiKey(String key) async {
-    // No-op
+    await _secureStorage.saveApiKey(key);
+    notifyListeners();
   }
 
-  String? get apiKey => null;
+  Future<String?> getApiKey() async {
+    return await _secureStorage.getApiKey();
+  }
 
   String _getTimeGreeting() {
     final hour = DateTime.now().hour;
@@ -160,6 +167,47 @@ Operational Rules:
 
     // Default fallback
     return "Understood. As your Architect, I suggest we keep our focus sharp. How does this request fit into our current development phase or your goal of building the ultimate Task Master app?";
+  }
+
+  /// Streaming chat response
+  Stream<String> chatStream(String message, {bool isLocalMode = true}) async* {
+    if (isLocalMode && isLLMReady) {
+      yield* _llmService.generateResponseStream(message);
+    } else {
+      // 1. Try Gemini if API Key exists
+      final apiKey = await _secureStorage.getApiKey();
+      if (apiKey != null && apiKey.isNotEmpty) {
+        try {
+          // Initialize Gemini (Gemini 1.5 Flash is fast and free-tier eligible)
+          final model = GenerativeModel(
+            model: 'gemini-1.5-flash',
+            apiKey: apiKey,
+          );
+
+          final content = [Content.text("$systemRole\n\nUser Query: $message")];
+          final responseStream = model.generateContentStream(content);
+
+          await for (final chunk in responseStream) {
+            if (chunk.text != null) {
+              yield chunk.text!;
+            }
+          }
+          return;
+        } catch (e) {
+          yield "Error connecting to Gemini: $e. Using offline backup.";
+        }
+      }
+
+      // 2. Fallback to Rule-Based Logic
+      final fullResponse = await chat(message);
+
+      // Simulate typing effect
+      final words = fullResponse.split(' ');
+      for (final word in words) {
+        await Future.delayed(const Duration(milliseconds: 50));
+        yield "$word ";
+      }
+    }
   }
 
   /// Parses natural language input using Regex AND Local ML

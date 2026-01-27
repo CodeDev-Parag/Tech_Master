@@ -5,6 +5,7 @@ import com.google.mediapipe.tasks.genai.llminference.LlmInference
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
+import io.flutter.plugin.common.EventChannel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -12,10 +13,26 @@ import kotlinx.coroutines.withContext
 
 class MainActivity : FlutterActivity() {
     private val CHANNEL = "com.taskmaster.llm/inference"
+    private val STREAM_CHANNEL = "com.taskmaster.llm/stream"
     private var llmInference: LlmInference? = null
+    private var eventSink: EventChannel.EventSink? = null
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
+
+        // Setup Event Channel for Streaming
+        EventChannel(flutterEngine.dartExecutor.binaryMessenger, STREAM_CHANNEL).setStreamHandler(
+            object : EventChannel.StreamHandler {
+                override fun onListen(arguments: Any?, events: EventChannel.EventSink?) {
+                    eventSink = events
+                }
+
+                override fun onCancel(arguments: Any?) {
+                    eventSink = null
+                }
+            }
+        )
+
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, CHANNEL).setMethodCallHandler { call, result ->
             when (call.method) {
                 "initialize" -> {
@@ -24,7 +41,9 @@ class MainActivity : FlutterActivity() {
                         try {
                             val options = LlmInference.LlmInferenceOptions.builder()
                                 .setModelPath(modelPath)
+                                .setMaxTokens(512)
                                 .setTemperature(0.7f)
+                                .setRandomSeed(101)
                                 .build()
                             llmInference = LlmInference.createFromOptions(this, options)
                             result.success(true)
@@ -36,13 +55,15 @@ class MainActivity : FlutterActivity() {
                     }
                 }
                 "generateResponse" -> {
+                    // Legacy non-streaming method (kept for compatibility)
                     val prompt = call.argument<String>("prompt")
                     if (prompt != null) {
                         val inference = llmInference
                         if (inference != null) {
                             CoroutineScope(Dispatchers.IO).launch {
                                 try {
-                                    val response = inference.generateResponse(prompt)
+                                    val formattedPrompt = "<start_of_turn>user\n$prompt\n<end_of_turn>model\n"
+                                    val response = inference.generateResponse(formattedPrompt)
                                     withContext(Dispatchers.Main) {
                                         result.success(response)
                                     }
@@ -52,6 +73,33 @@ class MainActivity : FlutterActivity() {
                                     }
                                 }
                             }
+                        } else {
+                            result.error("NOT_INITIALIZED", "LLM is not initialized", null)
+                        }
+                    } else {
+                        result.error("INVALID_ARG", "Prompt is required", null)
+                    }
+                }
+                "startStream" -> {
+                    val prompt = call.argument<String>("prompt")
+                    if (prompt != null) {
+                        val inference = llmInference
+                        if (inference != null) {
+                            val formattedPrompt = "<start_of_turn>user\n$prompt\n<end_of_turn>model\n"
+                            
+                            // Use generateResponseAsync for streaming
+                            inference.generateResponseAsync(formattedPrompt) { partialResponse, done ->
+                                runOnUiThread {
+                                    if (eventSink != null) {
+                                        if (done) {
+                                            eventSink?.success(mapOf("done" to true))
+                                        } else {
+                                            eventSink?.success(mapOf("text" to partialResponse))
+                                        }
+                                    }
+                                }
+                            }
+                            result.success(null) // Acknowledge start
                         } else {
                             result.error("NOT_INITIALIZED", "LLM is not initialized", null)
                         }
