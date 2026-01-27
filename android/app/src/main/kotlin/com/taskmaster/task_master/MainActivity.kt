@@ -105,9 +105,16 @@ class MainActivity : FlutterActivity() {
                                 return@setMethodCallHandler
                             }
 
-                            val systemPrompt = "System: You are a Productivity Architect, a high-performance coach focused on deep work, time-blocking, and the 80/20 rule. Rules: 1. Suggest actionable steps. 2. Prioritize tasks. 3. Be concise and use bullet points. 4. Discourage multitasking."
-                            val fullPrompt = "$systemPrompt\n$prompt"
-                            val formattedPrompt = "<start_of_turn>user\n$fullPrompt\n<end_of_turn>model\n"
+                            val systemPrompt = "System: You are a Productivity Architect, a high-performance coach focused on deep work, time-blocking, and the 80/20 rule. Rules: 1. Suggest actionable steps. 2. Prioritize tasks. 3. Be concise and use bullet points. 4. Discourage multitasking. Speak English only."
+                            
+                            // Detect if using Llama vs Gemma based on path or just use a more standard template
+                            val isLlama = modelPath.lowercase().contains("llama")
+                            val formattedPrompt = if (isLlama) {
+                                "<|begin_of_text|><|start_header_id|>system<|end_header_id|>\n\n$systemPrompt<|eot_id|><|start_header_id|>user<|end_header_id|>\n\n$prompt<|eot_id|><|start_header_id|>assistant<|end_header_id|>\n\n"
+                            } else {
+                                // Default Gemma/TinyLlama template
+                                "<start_of_turn>user\n$systemPrompt\n$prompt\n<end_of_turn>model\n"
+                            }
                             
                             isGenerating = true
                             try {

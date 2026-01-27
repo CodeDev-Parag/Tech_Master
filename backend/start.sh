@@ -1,6 +1,7 @@
 #!/bin/bash
 
-# Start Ollama in the background
+# Start Ollama only on localhost
+export OLLAMA_HOST=127.0.0.1:11434
 ollama serve &
 
 # Wait for Ollama to start
