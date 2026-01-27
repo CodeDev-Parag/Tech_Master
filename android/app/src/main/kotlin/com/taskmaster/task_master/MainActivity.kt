@@ -44,6 +44,17 @@ class MainActivity : FlutterActivity() {
                                 .setMaxTokens(512)
                                 .setTemperature(0.7f)
                                 .setRandomSeed(101)
+                                .setResultListener { partialResponse, done ->
+                                    runOnUiThread {
+                                        if (eventSink != null) {
+                                            if (done) {
+                                                eventSink?.success(mapOf("done" to true))
+                                            } else {
+                                                eventSink?.success(mapOf("text" to partialResponse))
+                                            }
+                                        }
+                                    }
+                                }
                                 .build()
                             llmInference = LlmInference.createFromOptions(this, options)
                             result.success(true)
@@ -87,18 +98,9 @@ class MainActivity : FlutterActivity() {
                         if (inference != null) {
                             val formattedPrompt = "<start_of_turn>user\n$prompt\n<end_of_turn>model\n"
                             
-                            // Use generateResponseAsync for streaming
-                            inference.generateResponseAsync(formattedPrompt) { partialResponse, done ->
-                                runOnUiThread {
-                                    if (eventSink != null) {
-                                        if (done) {
-                                            eventSink?.success(mapOf("done" to true))
-                                        } else {
-                                            eventSink?.success(mapOf("text" to partialResponse))
-                                        }
-                                    }
-                                }
-                            }
+                            // Use generateResponseAsync for streaming (Listener handled in init)
+                            inference.generateResponseAsync(formattedPrompt)
+                            
                             result.success(null) // Acknowledge start
                         } else {
                             result.error("NOT_INITIALIZED", "LLM is not initialized", null)
