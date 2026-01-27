@@ -7,15 +7,18 @@ ollama serve &
 echo "Waiting for Ollama to start..."
 sleep 5
 
-# Pull the model (This usually takes time on first run)
-# We use 'llama3' as requested. Change to 'phi3' or 'tinyllama' for faster CPU performance.
-MODEL=${AI_MODEL:-"llama3"}
-EMBED_MODEL=${AI_EMBED_MODEL:-"nomic-embed-text"}
-echo "Pulling model: $MODEL"
-ollama pull $MODEL
-echo "Pulling embedding model: $EMBED_MODEL"
-ollama pull $EMBED_MODEL
+# Pull models in the background so the server can start immediately
+# This prevents Render from timing out the deployment during download
+(
+  MODEL=${AI_MODEL:-"llama3"}
+  EMBED_MODEL=${AI_EMBED_MODEL:-"nomic-embed-text"}
+  echo "Background: Pulling model: $MODEL"
+  ollama pull $MODEL
+  echo "Background: Pulling embedding model: $EMBED_MODEL"
+  ollama pull $EMBED_MODEL
+  echo "Background: Models ready!"
+) &
 
-# Start FastAPI
-echo "Starting FastAPI..."
+# Start FastAPI immediately
+echo "Starting FastAPI on port $PORT..."
 uvicorn server:app --host 0.0.0.0 --port $PORT

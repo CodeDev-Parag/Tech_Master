@@ -74,6 +74,11 @@ custom_rag_prompt = ChatPromptTemplate.from_template(template)
 
 # --- Endpoints ---
 
+@app.get("/health")
+async def health_check():
+    """Verify server is alive and reachable."""
+    return {"status": "alive", "model": MODEL_NAME}
+
 @app.post("/train")
 async def train_knowledge_base(data: TrainRequest):
     """
@@ -146,6 +151,9 @@ async def chat_endpoint(request: ChatRequest):
         return StreamingResponse(response_generator(), media_type="application/x-ndjson")
 
     except Exception as e:
+        error_str = str(e).lower()
+        if "not found" in error_str or "404" in error_str:
+            raise HTTPException(status_code=503, detail="AI model is still loading. Please wait 1-2 minutes.")
         raise HTTPException(status_code=500, detail=str(e))
 
 if __name__ == "__main__":

@@ -74,6 +74,26 @@ Rules:
 
   bool get isLLMReady => _llmService.isInitialized;
 
+  Future<bool> checkServerHealth() async {
+    if (!_settingsRepo.useCustomServer) return false;
+    try {
+      String baseUrl = _settingsRepo.serverIp;
+      if (!baseUrl.startsWith('http')) baseUrl = 'http://$baseUrl:8000';
+      if (baseUrl.endsWith('/'))
+        baseUrl = baseUrl.substring(0, baseUrl.length - 1);
+
+      final response = await http
+          .get(Uri.parse('$baseUrl/health'))
+          .timeout(const Duration(seconds: 5));
+
+      debugPrint('AI_DEBUG: Health Check Status: ${response.statusCode}');
+      return response.statusCode == 200;
+    } catch (e) {
+      debugPrint('AI_DEBUG: Health Check Failed: $e');
+      return false;
+    }
+  }
+
   void trainModel(List<Task> tasks) {
     _mlService.train(tasks);
     notifyListeners();
@@ -205,6 +225,14 @@ Rules:
   Stream<String> chatStream(String message, {bool isLocalMode = true}) async* {
     if (_settingsRepo.useCustomServer) {
       debugPrint('AI_DEBUG: Server Mode Active');
+
+      // Check health first to see if server is up
+      final isAlive = await checkServerHealth();
+      if (!isAlive) {
+        yield "⚠️ Server is currently unreachable or starting up. Please wait a moment and try again.";
+        return;
+      }
+
       // 1. Server Mode
       try {
         String baseUrl = _settingsRepo.serverIp;
@@ -231,7 +259,8 @@ Rules:
 
         debugPrint('AI_DEBUG: Sending Request...');
         final client = http.Client();
-        final response = await client.send(request);
+        final response =
+            await client.send(request).timeout(const Duration(seconds: 15));
         debugPrint('AI_DEBUG: Response Status: ${response.statusCode}');
 
         if (response.statusCode == 200) {
@@ -252,12 +281,15 @@ Rules:
               debugPrint('AI_DEBUG: JSON Parse Error: $e');
             }
           }
+        } else if (response.statusCode == 503) {
+          yield "⏳ AI Model is still downloading on the server. Please wait 1-2 minutes and try again.";
         } else {
           debugPrint('AI_DEBUG: Server Error Code: ${response.statusCode}');
-          yield "Server Error: ${response.statusCode}";
+          yield "❌ Server Error: ${response.statusCode}. Check if Render is still booting.";
         }
       } catch (e) {
-        yield "Server Error: $e. Using local fallback.";
+        debugPrint('AI_DEBUG: Chat connection error: $e');
+        yield "❌ Connection Error: Ensure your Render URL is correct and the server is 'Live'.";
       }
     } else if (isLocalMode && isLLMReady) {
       // 2. Local LLM (Gemma)
