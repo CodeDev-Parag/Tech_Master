@@ -35,14 +35,35 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# --- AI Components ---
-llm = OllamaLLM(model=MODEL_NAME)
-embeddings = OllamaEmbeddings(model=EMBED_MODEL) 
-vector_store = Chroma(
-    collection_name="task_master_data",
-    embedding_function=embeddings,
-    persist_directory="./chroma_db"
-)
+# --- AI Components (Lazy Loaded) ---
+_llm = None
+_embeddings = None
+_vector_store = None
+
+def get_llm():
+    global _llm
+    if _llm is None:
+        print(f"DEBUG: Initializing LLM {MODEL_NAME}")
+        _llm = OllamaLLM(model=MODEL_NAME)
+    return _llm
+
+def get_embeddings():
+    global _embeddings
+    if _embeddings is None:
+        print(f"DEBUG: Initializing Embeddings {EMBED_MODEL}")
+        _embeddings = OllamaEmbeddings(model=EMBED_MODEL)
+    return _embeddings
+
+def get_vector_store():
+    global _vector_store
+    if _vector_store is None:
+        print("DEBUG: Initializing Vector Store")
+        _vector_store = Chroma(
+            collection_name="task_master_data",
+            embedding_function=get_embeddings(),
+            persist_directory="./chroma_db"
+        )
+    return _vector_store
 
 # --- Data Models ---
 class TaskItem(BaseModel):
@@ -97,18 +118,18 @@ async def train_knowledge_base(data: TrainRequest):
     Clears the current vector DB and re-populates it with the fresh snapshot
     of tasks and notes provided by the app.
     """
-    global vector_store
+    global _vector_store
     try:
+        vs = get_vector_store()
         # Reset DB (Simplest strategy for local sync: Wipe and Replace)
-        # Note: Chroma doesn't have a simple 'clear', so we delete collection and recreate
         try:
-            vector_store.delete_collection()
+            vs.delete_collection()
         except:
             pass # Collection might not exist
         
-        vector_store = Chroma(
+        _vector_store = Chroma(
             collection_name="task_master_data",
-            embedding_function=embeddings,
+            embedding_function=get_embeddings(),
             persist_directory="./chroma_db"
         )
 
@@ -124,7 +145,7 @@ async def train_knowledge_base(data: TrainRequest):
              documents.append(Document(page_content=f"Note: {note}", metadata={"type": "note"}))
         
         if documents:
-            vector_store.add_documents(documents)
+            get_vector_store().add_documents(documents)
             
         return {"status": "success", "indexed_items": len(documents)}
     except Exception as e:
@@ -140,13 +161,13 @@ async def chat_endpoint(request: ChatRequest):
     """
     try:
         # 1. Retrieve relevant docs
-        retriever = vector_store.as_retriever(search_kwargs={"k": request.context_window})
+        retriever = get_vector_store().as_retriever(search_kwargs={"k": request.context_window})
         
         # 2. Build Chain
         rag_chain = (
             {"context": retriever | format_docs, "question": RunnablePassthrough()}
             | custom_rag_prompt
-            | llm
+            | get_llm()
             | StrOutputParser()
         )
         

@@ -21,4 +21,4 @@ sleep 5
 
 # Start FastAPI immediately
 echo "Starting FastAPI on port $PORT..."
-uvicorn server:app --host 0.0.0.0 --port $PORT
+exec uvicorn server:app --host 0.0.0.0 --port $PORT
