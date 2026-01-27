@@ -114,16 +114,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     },
                   ),
                 ),
-                Divider(color: theme.dividerColor, height: 1),
-                _settingsTile(
-                  theme,
-                  icon: Iconsax.key,
-                  iconColor: Colors.teal,
-                  title: 'Gemini API Key',
-                  subtitle: 'Required for Online Mode',
-                  onTap: () => _showApiKeyDialog(context),
-                  trailing: const Icon(Iconsax.arrow_right_3, size: 16),
-                ),
               ],
             ).animate().fadeIn(delay: 250.ms).slideY(begin: 0.1),
 
@@ -266,61 +256,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           TextButton(
             onPressed: () => Navigator.pop(context),
             child: const Text('Close'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showApiKeyDialog(BuildContext context) async {
-    final aiService = ref.read(aiServiceProvider);
-    final currentKey = await aiService.getApiKey() ?? '';
-    final controller = TextEditingController(text: currentKey);
-
-    if (!mounted) return;
-
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(
-          'Gemini API Key',
-          style: GoogleFonts.inter(fontWeight: FontWeight.bold),
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              'Enter your Google Gemini API Key to enable the high-intelligence Online Mode.',
-              style: GoogleFonts.inter(fontSize: 14),
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: controller,
-              obscureText: true,
-              decoration: const InputDecoration(
-                labelText: 'API Key',
-                border: OutlineInputBorder(),
-                hintText: 'AIzaSy...',
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () async {
-              await aiService.setApiKey(controller.text.trim());
-              if (context.mounted) Navigator.pop(context);
-              if (mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('API Key saved securely!')),
-                );
-              }
-            },
-            child: const Text('Save'),
           ),
         ],
       ),

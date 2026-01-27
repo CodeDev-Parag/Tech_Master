@@ -12,7 +12,6 @@ import '../../data/models/note.dart';
 import '../../data/repositories/note_repository.dart';
 import '../../data/services/note_export_service.dart';
 import '../../data/repositories/settings_repository.dart';
-import '../../core/services/secure_storage_service.dart';
 
 // Repository providers
 final taskRepositoryProvider = Provider<TaskRepository>((ref) {
@@ -39,14 +38,9 @@ final localMLServiceProvider = Provider<LocalMLService>((ref) {
   return LocalMLService();
 });
 
-final secureStorageServiceProvider = Provider<SecureStorageService>((ref) {
-  return SecureStorageService();
-});
-
 final aiServiceProvider = ChangeNotifierProvider<AIService>((ref) {
   final mlService = ref.watch(localMLServiceProvider);
-  final secureStorage = ref.watch(secureStorageServiceProvider);
-  final service = AIService(mlService, secureStorage);
+  final service = AIService(mlService);
   service.init();
   return service;
 });

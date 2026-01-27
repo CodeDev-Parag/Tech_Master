@@ -78,12 +78,9 @@ void main() async {
     debugPrint('Error initializing services: $e');
   }
 
-  // Initialize Secure Storage
-  final secureStorage = SecureStorageService();
-
   // Initialize AI service
   final localMLService = LocalMLService();
-  final aiService = AIService(localMLService, secureStorage);
+  final aiService = AIService(localMLService);
   try {
     await aiService.init();
   } catch (e) {

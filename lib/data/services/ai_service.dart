@@ -2,8 +2,6 @@ import 'package:flutter/material.dart';
 import '../models/task.dart';
 import 'local_ml_service.dart';
 import '../../core/services/llm_service.dart';
-import '../../core/services/secure_storage_service.dart';
-import 'package:google_generative_ai/google_generative_ai.dart';
 import 'dart:async';
 
 class ParsedTask {
@@ -40,10 +38,9 @@ class ProductivityInsight {
 
 class AIService extends ChangeNotifier {
   final LocalMLService _mlService;
-  final SecureStorageService _secureStorage;
   final LlmService _llmService = LlmService();
 
-  AIService(this._mlService, this._secureStorage);
+  AIService(this._mlService);
 
   static const String systemRole = """
 You are the Task Master Architect, a senior software engineer and personal productivity coach. Your goal is to help me build the "Task Master" app—a goal-aware "Life OS"—while simultaneously guiding me to master any skill or subject I choose.
@@ -85,15 +82,6 @@ Operational Rules:
   void trainModel(List<Task> tasks) {
     _mlService.train(tasks);
     notifyListeners();
-  }
-
-  Future<void> setApiKey(String key) async {
-    await _secureStorage.saveApiKey(key);
-    notifyListeners();
-  }
-
-  Future<String?> getApiKey() async {
-    return await _secureStorage.getApiKey();
   }
 
   String _getTimeGreeting() {
@@ -174,31 +162,7 @@ Operational Rules:
     if (isLocalMode && isLLMReady) {
       yield* _llmService.generateResponseStream(message);
     } else {
-      // 1. Try Gemini if API Key exists
-      final apiKey = await _secureStorage.getApiKey();
-      if (apiKey != null && apiKey.isNotEmpty) {
-        try {
-          // Initialize Gemini (Using 'gemini-pro' for maximum compatibility)
-          final model = GenerativeModel(
-            model: 'gemini-pro',
-            apiKey: apiKey,
-          );
-
-          final content = [Content.text("$systemRole\n\nUser Query: $message")];
-          final responseStream = model.generateContentStream(content);
-
-          await for (final chunk in responseStream) {
-            if (chunk.text != null) {
-              yield chunk.text!;
-            }
-          }
-          return;
-        } catch (e) {
-          yield "Error connecting to Gemini: $e. Using offline backup.";
-        }
-      }
-
-      // 2. Fallback to Rule-Based Logic
+      // Fallback to Rule-Based Logic
       final fullResponse = await chat(message);
 
       // Simulate typing effect
