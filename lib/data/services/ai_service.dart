@@ -204,45 +204,56 @@ Rules:
   /// Streaming chat response
   Stream<String> chatStream(String message, {bool isLocalMode = true}) async* {
     if (_settingsRepo.useCustomServer) {
+      debugPrint('AI_DEBUG: Server Mode Active');
       // 1. Server Mode
       try {
         String baseUrl = _settingsRepo.serverIp;
+        debugPrint('AI_DEBUG: Raw Server IP from Settings: $baseUrl');
+
         if (!baseUrl.startsWith('http')) {
           baseUrl = 'http://$baseUrl:8000';
+          debugPrint('AI_DEBUG: Normalized IP to: $baseUrl');
         }
         if (baseUrl.endsWith('/')) {
           baseUrl = baseUrl.substring(0, baseUrl.length - 1);
         }
 
         final url = Uri.parse('$baseUrl/chat');
+        debugPrint('AI_DEBUG: Prepared URL: $url');
 
         // Check if message is JSON (hack for direct RAG tests) or just text
         final body = jsonEncode({'message': message});
+        debugPrint('AI_DEBUG: Request Body: $body');
 
         final request = http.Request('POST', url);
         request.headers['Content-Type'] = 'application/json';
         request.body = body;
 
+        debugPrint('AI_DEBUG: Sending Request...');
         final client = http.Client();
         final response = await client.send(request);
+        debugPrint('AI_DEBUG: Response Status: ${response.statusCode}');
 
         if (response.statusCode == 200) {
+          debugPrint('AI_DEBUG: Response 200 - Reading Stream');
           final stream = response.stream
               .transform(utf8.decoder)
               .transform(const LineSplitter());
 
           await for (final line in stream) {
+            debugPrint('AI_DEBUG: Stream Line: $line');
             if (line.trim().isEmpty) continue;
             try {
               final data = jsonDecode(line);
               if (data['token'] != null) {
                 yield data['token'];
               }
-            } catch (_) {
-              // Swallow parsing errors for partial lines
+            } catch (e) {
+              debugPrint('AI_DEBUG: JSON Parse Error: $e');
             }
           }
         } else {
+          debugPrint('AI_DEBUG: Server Error Code: ${response.statusCode}');
           yield "Server Error: ${response.statusCode}";
         }
       } catch (e) {
