@@ -1,9 +1,19 @@
+import os
+import sys
+
+# --- SQLite Hardware/Version Compatibility ---
+# Required for ChromaDB on many limited Linux environments (like Render/Debian Slim)
+try:
+    __import__('pysqlite3')
+    sys.modules['sqlite3'] = sys.modules.pop('pysqlite3')
+except ImportError:
+    pass
+
 import uvicorn
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import List, Optional
-import os
 
 from langchain_ollama import OllamaLLM, OllamaEmbeddings
 from langchain_chroma import Chroma

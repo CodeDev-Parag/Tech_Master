@@ -12,6 +12,7 @@ import '../../data/models/note.dart';
 import '../../data/repositories/note_repository.dart';
 import '../../data/services/note_export_service.dart';
 import '../../data/repositories/settings_repository.dart';
+import '../../data/services/local_nlp_service.dart';
 
 // Repository providers
 final taskRepositoryProvider = Provider<TaskRepository>((ref) {
@@ -40,8 +41,9 @@ final localMLServiceProvider = Provider<LocalMLService>((ref) {
 
 final aiServiceProvider = ChangeNotifierProvider<AIService>((ref) {
   final mlService = ref.watch(localMLServiceProvider);
+  final nlpService = ref.watch(localNlpServiceProvider);
   final settingsRepo = ref.watch(settingsRepositoryProvider);
-  final service = AIService(mlService, settingsRepo);
+  final service = AIService(mlService, nlpService, settingsRepo);
   service.init();
   return service;
 });
@@ -116,18 +118,10 @@ class TasksNotifier extends StateNotifier<List<Task>> {
   }
 
   void _triggerLearning() {
-    // 1. Re-train Local Model with new data
+    // Re-train Local Model with current tasks to ensure personalization
     final tasks = state;
     final aiService = _ref.read(aiServiceProvider);
     aiService.trainModel(tasks);
-
-    // 2. Sync if "Continuous Learning" is enabled
-    final autoCollect = _ref.read(autoCollectProvider);
-    if (autoCollect) {
-      final mlService = _ref.read(localMLServiceProvider);
-      // Fire and forget - don't await to avoid blocking UI
-      mlService.syncTrainingData(_ref);
-    }
   }
 
   List<Task> filterByStatus(TaskStatus status) {

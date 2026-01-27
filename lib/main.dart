@@ -13,6 +13,7 @@ import 'data/models/note.dart';
 import 'data/repositories/task_repository.dart';
 import 'data/repositories/category_repository.dart';
 import 'data/services/ai_service.dart';
+import 'data/services/local_nlp_service.dart';
 import 'data/repositories/note_repository.dart';
 
 import 'data/models/timetable.dart';
@@ -79,7 +80,8 @@ void main() async {
 
   // Initialize AI service
   final localMLService = LocalMLService();
-  final aiService = AIService(localMLService, settingsRepo);
+  final localNLPService = LocalNlpService();
+  final aiService = AIService(localMLService, localNLPService, settingsRepo);
   try {
     await aiService.init();
   } catch (e) {

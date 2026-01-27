@@ -1,8 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:http/http.dart' as http;
-import '../../core/services/server_service.dart';
+import 'package:hive/hive.dart';
 import '../models/task.dart';
 import '../../core/constants/app_constants.dart';
+import 'dart:convert';
 
 // Simple Naive Bayes Classifier for Categories and Priorities
 class LocalMLService {
@@ -18,9 +18,9 @@ class LocalMLService {
   final Map<Priority, int> _priorityTaskCounts = {};
 
   int _totalTasks = 0;
+  bool _isInitialized = false;
 
-  // Pre-training dataset (The "Different Data Set" user asked for)
-  // We can inject different "knowledge basics" here.
+  // Pre-training dataset
   static const Map<String, String> _seedTrainingData = {
     'buy milk': 'Personal',
     'buy groceries': 'Personal',
@@ -52,23 +52,104 @@ class LocalMLService {
     'tax filing': Priority.high,
   };
 
+  Future<void> init() async {
+    if (_isInitialized) return;
+
+    final box = await Hive.openBox(AppConstants.aiWeightsBox);
+    final savedData = box.get('weights');
+
+    if (savedData != null) {
+      try {
+        final decoded = json.decode(savedData as String);
+        _loadFromMap(decoded);
+      } catch (e) {
+        print("Error loading AI weights: $e");
+      }
+    }
+
+    _isInitialized = true;
+  }
+
+  void _loadFromMap(Map<String, dynamic> data) {
+    // Load vocab
+    if (data['vocab'] != null) {
+      (data['vocab'] as Map).forEach((k, v) => _vocab[k.toString()] = v as int);
+    }
+
+    // Load Category Word Counts
+    if (data['categoryWordCounts'] != null) {
+      (data['categoryWordCounts'] as Map).forEach((cat, words) {
+        _categoryWordCounts[cat.toString()] = {};
+        (words as Map).forEach((word, count) {
+          _categoryWordCounts[cat.toString()]![word.toString()] = count as int;
+        });
+      });
+    }
+
+    // Load Category Task Counts
+    if (data['categoryTaskCounts'] != null) {
+      (data['categoryTaskCounts'] as Map)
+          .forEach((k, v) => _categoryTaskCounts[k.toString()] = v as int);
+    }
+
+    // Load Priority Word Counts
+    if (data['priorityWordCounts'] != null) {
+      (data['priorityWordCounts'] as Map).forEach((prior, words) {
+        final priority = Priority.values.firstWhere(
+            (e) => e.toString().split('.').last == prior,
+            orElse: () => Priority.medium);
+        _priorityWordCounts[priority] = {};
+        (words as Map).forEach((word, count) {
+          _priorityWordCounts[priority]![word.toString()] = count as int;
+        });
+      });
+    }
+
+    // Load Priority Task Counts
+    if (data['priorityTaskCounts'] != null) {
+      (data['priorityTaskCounts'] as Map).forEach((prior, count) {
+        final priority = Priority.values.firstWhere(
+            (e) => e.toString().split('.').last == prior,
+            orElse: () => Priority.medium);
+        _priorityTaskCounts[priority] = count as int;
+      });
+    }
+
+    _totalTasks = data['totalTasks'] ?? 0;
+  }
+
+  Future<void> _saveToHive() async {
+    final box = await Hive.openBox(AppConstants.aiWeightsBox);
+    final data = {
+      'vocab': _vocab,
+      'categoryWordCounts': _categoryWordCounts,
+      'categoryTaskCounts': _categoryTaskCounts,
+      'priorityWordCounts': _priorityWordCounts
+          .map((k, v) => MapEntry(k.toString().split('.').last, v)),
+      'priorityTaskCounts': _priorityTaskCounts
+          .map((k, v) => MapEntry(k.toString().split('.').last, v)),
+      'totalTasks': _totalTasks,
+    };
+    await box.put('weights', json.encode(data));
+  }
+
   /// Trains the model on a list of tasks AND the seed data
-  void train(List<Task> userTasks) {
+  Future<void> train(List<Task> userTasks) async {
     _clearModel();
 
     // 1. Train on Seed Data (Base Knowledge)
     _seedTrainingData.forEach((text, category) {
-      _trainSingle(text, category: category);
+      _trainSingleInternal(text, category: category);
     });
 
     _seedPriorityData.forEach((text, priority) {
-      _trainSingle(text, priority: priority);
+      _trainSingleInternal(text, priority: priority);
     });
 
     // 2. Train on User Data (Personalization)
     for (var task in userTasks) {
       if (task.title.isNotEmpty) {
-        _trainSingle(
+        _trainSingleInternal(
           "${task.title} ${task.description ?? ""}",
           category: task.categoryId,
           priority: task.priority,
@@ -76,10 +157,22 @@ class LocalMLService {
       }
     }
 
-    print("ML Service Trained on $_totalTasks items.");
+    await _saveToHive();
+    print("ML Service Trained on $_totalTasks items and persisted.");
   }
 
-  void _trainSingle(String text, {String? category, Priority? priority}) {
+  /// Incremental learning from a single task (The Feedback Loop)
+  Future<void> learnFromTask(Task task) async {
+    _trainSingleInternal(
+      "${task.title} ${task.description ?? ""}",
+      category: task.categoryId,
+      priority: task.priority,
+    );
+    await _saveToHive();
+  }
+
+  void _trainSingleInternal(String text,
+      {String? category, Priority? priority}) {
     final tokens = _tokenize(text);
     if (tokens.isEmpty) return;
 
@@ -117,14 +210,13 @@ class LocalMLService {
     double maxProb = double.negativeInfinity;
 
     _categoryTaskCounts.forEach((category, count) {
-      // P(Category)
-      // Let's use a standard Sum of Logs approach to avoid underflow
       double logProb = 0.0;
       final categoryTotalWords =
           _categoryWordCounts[category]?.values.fold(0, (a, b) => a + b) ?? 1;
 
       for (var word in tokens) {
         final wordCount = _categoryWordCounts[category]?[word] ?? 0;
+        // Laplace smoothing
         logProb += (wordCount + 1) / (categoryTotalWords + _vocab.length);
       }
 
@@ -180,71 +272,6 @@ class LocalMLService {
     _priorityWordCounts.clear();
     _priorityTaskCounts.clear();
     _totalTasks = 0;
-  }
-
-  /// Exports the local training data as a JSON string
-  /// This can be used for "Data Collection" (Federated or Centralized)
-  String exportTrainingData() {
-    final buffer = StringBuffer();
-    buffer.writeln('{"version": "1.0", "data": [');
-
-    // We can't easily export the raw counts back to original sentences without storing them.
-    // However, since the prompt asks "how can i collect that data", usually this involves
-    // sending the *raw* inputs (anonymized) to a server.
-    // Since we don't store raw inputs in this simple ML model (only counts),
-    // we will simulate the export of the "Learned Model" itself, which is also valuable.
-
-    // Actually, to be useful for "different users", we'd want the weights.
-    // Let's export the model weights (Category Word Counts).
-
-    // Export Category Model
-    // Format: {"type": "category_model", "category": "Personal", "word": "milk", "count": 5}
-
-    var first = true;
-    _categoryWordCounts.forEach((category, wordCounts) {
-      wordCounts.forEach((word, count) {
-        if (!first) buffer.writeln(',');
-        buffer.write(
-            '  {"type": "category_model", "category": "$category", "word": "$word", "count": $count}');
-        first = false;
-      });
-    });
-
-    _priorityWordCounts.forEach((priority, wordCounts) {
-      wordCounts.forEach((word, count) {
-        if (!first) buffer.writeln(',');
-        buffer.write(
-            '  {"type": "priority_model", "priority": "${priority.toString().split('.').last}", "word": "$word", "count": $count}');
-        first = false;
-      });
-    });
-
-    buffer.writeln('\n]}');
-    return buffer.toString();
-  }
-
-  /// Syncs the current model weights to the collection backend
-  Future<bool> syncTrainingData(dynamic ref) async {
-    final data = exportTrainingData();
-    try {
-      final response = await http.post(
-        Uri.parse(AppConstants.dataCollectionServerUrl),
-        headers: {'Content-Type': 'application/json'},
-        body: data,
-      );
-
-      // Trigger a status refresh on sync success
-      ref.read(serverServiceProvider).checkHealth();
-
-      if (response.statusCode == 200) {
-        print('Training data synced to backend!');
-        return true;
-      }
-      return false;
-    } catch (e) {
-      print('Failed to sync training data: $e');
-      return false;
-    }
   }
 
   static const Set<String> _stopWords = {

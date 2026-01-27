@@ -7,7 +7,18 @@ echo "Starting Ollama internally on 127.0.0.1:11434..."
 ollama serve &
 
 # Wait for Ollama to initialize
-sleep 5
+echo "Waiting for Ollama to be ready..."
+MAX_RETRIES=30
+RETRY_COUNT=0
+while ! curl -s http://127.0.0.1:11434/api/tags > /dev/null; do
+    RETRY_COUNT=$((RETRY_COUNT+1))
+    if [ $RETRY_COUNT -ge $MAX_RETRIES ]; then
+        echo "Error: Ollama failed to start after $MAX_RETRIES seconds."
+        exit 1
+    fi
+    sleep 1
+done
+echo "Ollama is ready!"
 
 # Pull models in the background
 (

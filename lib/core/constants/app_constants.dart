@@ -1,13 +1,14 @@
 class AppConstants {
   // App Info
   static const String appName = 'Tech Master';
-  static const String appVersion = '1.1.4';
+  static const String appVersion = '1.1.8';
 
   // Hive Box Names
   static const String tasksBox = 'tasks_box';
   static const String categoriesBox = 'categories_box';
   static const String settingsBox = 'settings_box';
   static const String userStatsBox = 'user_stats_box';
+  static const String aiWeightsBox = 'ai_weights_box';
 
   // Settings Keys
   static const String themeMode = 'theme_mode';

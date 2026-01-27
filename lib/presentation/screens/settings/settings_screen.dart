@@ -36,6 +36,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
             const SizedBox(height: 24),
 
+            // What's New Card
+            _buildWhatsNewCard(theme),
+            const SizedBox(height: 24),
+
             // Appearance Section
             _sectionHeader('Appearance', theme),
             const SizedBox(height: 12),
@@ -59,42 +63,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             ).animate().fadeIn(delay: 100.ms).slideY(begin: 0.1),
             const SizedBox(height: 24),
 
-            // Research & Privacy
-            _sectionHeader('Research Contribution', theme),
-            const SizedBox(height: 12),
-            _settingsCard(
-              theme,
-              children: [
-                _settingsTile(
-                  theme,
-                  icon: Iconsax.cloud_connection,
-                  iconColor: Colors.blueAccent,
-                  title: 'Continuous Learning',
-                  subtitle: 'Automatically share anonymous training data',
-                  trailing: Switch(
-                    value: ref.watch(autoCollectProvider),
-                    onChanged: (value) async {
-                      ref.read(autoCollectProvider.notifier).toggle(value);
-                      if (value) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                              content: Text(
-                                  'Continuous learning enabled! Your data helps improve the model.')),
-                        );
-                        // Trigger immediate sync
-                        final mlService = ref.read(localMLServiceProvider);
-                        await mlService.syncTrainingData(ref);
-                      }
-                    },
-                  ),
-                ),
-              ],
-            ).animate().fadeIn(delay: 200.ms).slideY(begin: 0.1),
-
-            const SizedBox(height: 24),
-
-            // AI Configuration
-            _sectionHeader('Intelligence', theme),
+            // Intelligence & Privacy
+            _sectionHeader('Adaptive Intelligence', theme),
             const SizedBox(height: 12),
             _settingsCard(
               theme,
@@ -103,55 +73,24 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   theme,
                   icon: Iconsax.cpu,
                   iconColor: Colors.purpleAccent,
-                  title: 'Local AI Mode',
-                  subtitle: ref.watch(aiModeProvider)
-                      ? 'On-Device (Gemma 2B)'
-                      : 'Classic (Rule-Based)',
+                  title: 'On-Device Learning',
+                  subtitle: 'Predict categories/priority from your patterns',
                   trailing: Switch(
-                    value: ref.watch(aiModeProvider),
-                    onChanged: (value) {
-                      ref.read(aiModeProvider.notifier).toggle(value);
+                    value: ref.watch(autoCollectProvider),
+                    onChanged: (value) async {
+                      ref.read(autoCollectProvider.notifier).toggle(value);
+                      if (value) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                              content: Text(
+                                  'Adaptive local learning enabled! The system will now learn from your habits.')),
+                        );
+                      }
                     },
                   ),
                 ),
-                Divider(color: theme.dividerColor, height: 1),
-                _settingsTile(
-                  theme,
-                  icon: Icons.dns,
-                  iconColor: Colors.orangeAccent,
-                  title: 'Python Backend Server',
-                  subtitle: ref.watch(customServerModeProvider)
-                      ? 'Enabled (${ref.watch(serverIpProvider)})'
-                      : 'Disabled',
-                  trailing: Switch(
-                    value: ref.watch(customServerModeProvider),
-                    onChanged: (value) {
-                      ref.read(customServerModeProvider.notifier).toggle(value);
-                    },
-                  ),
-                ),
-                if (ref.watch(customServerModeProvider)) ...[
-                  Divider(color: theme.dividerColor, height: 1),
-                  _settingsTile(
-                    theme,
-                    icon: Iconsax.edit,
-                    iconColor: Colors.green,
-                    title: 'Set Server IP',
-                    subtitle: ref.watch(serverIpProvider),
-                    onTap: () => _showServerIpDialog(context, ref),
-                  ),
-                  Divider(color: theme.dividerColor, height: 1),
-                  _settingsTile(
-                    theme,
-                    icon: Iconsax.refresh,
-                    iconColor: Colors.blue,
-                    title: 'Sync Data to Server',
-                    subtitle: 'Send Tasks/Notes to Python RAG',
-                    onTap: () => _syncDataToServer(context, ref),
-                  ),
-                ]
               ],
-            ).animate().fadeIn(delay: 250.ms).slideY(begin: 0.1),
+            ).animate().fadeIn(delay: 200.ms).slideY(begin: 0.1),
 
             const SizedBox(height: 24),
 
@@ -213,6 +152,81 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             const SizedBox(height: 100),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildWhatsNewCard(ThemeData theme) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            theme.colorScheme.primary.withValues(alpha: 0.8),
+            theme.colorScheme.secondary.withValues(alpha: 0.8),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: theme.colorScheme.primary.withValues(alpha: 0.3),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Iconsax.magic_star, color: Colors.white, size: 24),
+              const SizedBox(width: 12),
+              Text(
+                "What's New in 1.1.8",
+                style: GoogleFonts.inter(
+                  color: Colors.white,
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          _whatsNewItem(Iconsax.cpu, "100% Local AI",
+              "No internet needed. Zero latency."),
+          _whatsNewItem(Iconsax.shield_tick, "Privacy First",
+              "Your data never leaves this device."),
+          _whatsNewItem(Iconsax.flash, "Adaptive Engine",
+              "Learns from your productivity patterns."),
+        ],
+      ),
+    ).animate().scale(delay: 50.ms).fadeIn();
+  }
+
+  Widget _whatsNewItem(IconData icon, String title, String desc) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8.0),
+      child: Row(
+        children: [
+          Icon(icon, color: Colors.white70, size: 16),
+          const SizedBox(width: 8),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(title,
+                  style: GoogleFonts.inter(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 13)),
+              Text(desc,
+                  style:
+                      GoogleFonts.inter(color: Colors.white70, fontSize: 11)),
+            ],
+          ),
+        ],
       ),
     );
   }
@@ -298,54 +312,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     );
   }
 
-  void _showServerIpDialog(BuildContext context, WidgetRef ref) {
-    final controller = TextEditingController(text: ref.read(serverIpProvider));
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Server URL'),
-        content: TextField(
-          controller: controller,
-          decoration: const InputDecoration(
-            hintText: 'https://my-app.onrender.com',
-            labelText: 'Server URL',
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () {
-              ref.read(serverIpProvider.notifier).update(controller.text);
-              Navigator.pop(context);
-            },
-            child: const Text('Save'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Future<void> _syncDataToServer(BuildContext context, WidgetRef ref) async {
-    final aiService = ref.read(aiServiceProvider);
-    final tasks = ref.read(tasksProvider);
-    final notes = ref.read(notesProvider);
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Syncing data to Python Server...')),
-    );
-
-    await aiService.syncData(tasks, notes);
-
-    if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Sync request sent! Check server logs.')),
-      );
-    }
-  }
-
   final String _privacyPolicyText = '''
 **Privacy Policy**
 
@@ -356,11 +322,11 @@ Your privacy is important to us. It is Tech Master's policy to respect your priv
 **1. Information We Collect**
 We only ask for personal information when we truly need it to provide a service to you. We collect it by fair and lawful means, with your knowledge and consent. We also let you know why we’re collecting it and how it will be used.
 
-**2. AI Data Usage**
-When you use AI features (Task Parsing, Chatbot, Smart Suggestions), your input data (text prompts, task descriptions) is sent to our AI providers (OpenRouter/OpenAI) solely for the purpose of processing your request. 
-- We do **not** use your data to train public AI models.
-- Data is transmitted securely via encryption.
-- We do not store your chat history on external servers; it is processed transiently.
+**2. Local AI & Data Privacy**
+Everything stays on your device. We use a custom, on-device Natural Language Processing (NLP) system and Naive Bayes machine learning to help you organize tasks.
+- **No External Servers**: Your chat history and task descriptions are NOT sent to cloud AI providers.
+- **Local Learning**: The "Adaptive Intelligence" system trains a local model on your device to improve category and priority predictions.
+- **Data remains under your control.**
 
 **3. Local Storage**
 All your tasks, categories, and settings are stored locally on your device using the Hive database. This means you have full control over your data. If you delete the app, this data is removed from your device.

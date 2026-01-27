@@ -1,145 +1,23 @@
 package com.taskmaster.task_master
 
-import android.os.Bundle
-import com.google.mediapipe.tasks.genai.llminference.LlmInference
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
-import io.flutter.plugin.common.EventChannel
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 
 class MainActivity : FlutterActivity() {
     private val CHANNEL = "com.taskmaster.llm/inference"
-    private val STREAM_CHANNEL = "com.taskmaster.llm/stream"
-    private var llmInference: LlmInference? = null
-    private var eventSink: EventChannel.EventSink? = null
-    private var isGenerating = false
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
 
-        // Setup Event Channel for Streaming
-        EventChannel(flutterEngine.dartExecutor.binaryMessenger, STREAM_CHANNEL).setStreamHandler(
-            object : EventChannel.StreamHandler {
-                override fun onListen(arguments: Any?, events: EventChannel.EventSink?) {
-                    eventSink = events
-                }
-
-                override fun onCancel(arguments: Any?) {
-                    eventSink = null
-                }
-            }
-        )
-
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, CHANNEL).setMethodCallHandler { call, result ->
+            // Stubs for compatibility if any old Dart code still calls this
             when (call.method) {
-                "initialize" -> {
-                    val modelPath = call.argument<String>("modelPath")
-                    if (modelPath != null) {
-                        try {
-                            val options = LlmInference.LlmInferenceOptions.builder()
-                                .setModelPath(modelPath)
-                                .setMaxTokens(512)
-                                .setTemperature(0.4f) // Lower temperature for more focused/less random output
-                                .setRandomSeed(101)
-                                .setResultListener { partialResponse, done ->
-                                    runOnUiThread {
-                                        if (done) {
-                                            isGenerating = false
-                                        }
-                                        if (eventSink != null) {
-                                            if (done) {
-                                                eventSink?.success(mapOf("done" to true))
-                                            } else {
-                                                eventSink?.success(mapOf("text" to partialResponse))
-                                            }
-                                        }
-                                    }
-                                }
-                                .build()
-                            llmInference = LlmInference.createFromOptions(this, options)
-                            result.success(true)
-                        } catch (e: Exception) {
-                            result.error("INIT_FAILED", e.message, null)
-                        }
-                    } else {
-                        result.error("INVALID_ARG", "Model path is required", null)
-                    }
-                }
-                "generateResponse" -> {
-                    // Legacy non-streaming method (kept for compatibility)
-                    val prompt = call.argument<String>("prompt")
-                    if (prompt != null) {
-                        val inference = llmInference
-                        if (inference != null) {
-                            CoroutineScope(Dispatchers.IO).launch {
-                                try {
-                                    val formattedPrompt = "<start_of_turn>user\n$prompt\n<end_of_turn>model\n"
-                                    val response = inference.generateResponse(formattedPrompt)
-                                    withContext(Dispatchers.Main) {
-                                        result.success(response)
-                                    }
-                                } catch (e: Exception) {
-                                    withContext(Dispatchers.Main) {
-                                        result.error("INFERENCE_FAILED", e.message, null)
-                                    }
-                                }
-                            }
-                        } else {
-                            result.error("NOT_INITIALIZED", "LLM is not initialized", null)
-                        }
-                    } else {
-                        result.error("INVALID_ARG", "Prompt is required", null)
-                    }
-                }
-                "startStream" -> {
-                    val prompt = call.argument<String>("prompt")
-                    if (prompt != null) {
-                        val inference = llmInference
-                        if (inference != null) {
-                            if (isGenerating) {
-                                result.error("BUSY", "Previous response still generating", null)
-                                return@setMethodCallHandler
-                            }
-
-                            val systemPrompt = "System: You are a Productivity Architect, a high-performance coach focused on deep work, time-blocking, and the 80/20 rule. Rules: 1. Suggest actionable steps. 2. Prioritize tasks. 3. Be concise and use bullet points. 4. Discourage multitasking. Speak English only."
-                            
-                            // Detect if using Llama vs Gemma based on path or just use a more standard template
-                            val isLlama = modelPath.lowercase().contains("llama")
-                            val formattedPrompt = if (isLlama) {
-                                "<|begin_of_text|><|start_header_id|>system<|end_header_id|>\n\n$systemPrompt<|eot_id|><|start_header_id|>user<|end_header_id|>\n\n$prompt<|eot_id|><|start_header_id|>assistant<|end_header_id|>\n\n"
-                            } else {
-                                // Default Gemma/TinyLlama template
-                                "<start_of_turn>user\n$systemPrompt\n$prompt\n<end_of_turn>model\n"
-                            }
-                            
-                            isGenerating = true
-                            try {
-                                inference.generateResponseAsync(formattedPrompt)
-                                result.success(null) 
-                            } catch (e: Exception) {
-                                isGenerating = false
-                                result.error("failed", e.message, null)
-                            }
-                        } else {
-                            result.error("NOT_INITIALIZED", "LLM is not initialized", null)
-                        }
-                    } else {
-                        result.error("INVALID_ARG", "Prompt is required", null)
-                    }
-                }
-                else -> {
-                    result.notImplemented()
-                }
+                "initialize" -> result.success(true)
+                "generateResponse" -> result.success("Native LLM disabled. Use local Dart engine.")
+                "startStream" -> result.error("DISABLED", "Native LLM disabled", null)
+                else -> result.notImplemented()
             }
         }
-    }
-
-    override fun onDestroy() {
-        super.onDestroy()
-        llmInference?.close()
     }
 }

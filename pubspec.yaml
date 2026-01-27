@@ -1,7 +1,7 @@
 name: tech_master
 description: Tech Master - AI-powered productivity system with smart task analysis, note-taking, and procrastination combat techniques.
 publish_to: 'none'
-version: 1.1.4+6
+version: 1.1.8+7
 
 environment:
   sdk: '>=3.0.0 <4.0.0'
@@ -41,9 +41,6 @@ dependencies:
   uuid: ^4.3.3
   path_provider: ^2.1.2
   
-  # HTTP for AI API calls
-  http: ^1.2.0
-  
   # Export & Sharing
   pdf: ^3.10.8
   screenshot: ^3.0.0
@@ -74,3 +71,4 @@ flutter:
   assets:
     - assets/icons/
     - assets/images/
+    - assets/data/

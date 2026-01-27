@@ -21,9 +21,7 @@ import '../notes/notes_screen.dart';
 import '../procrastination/procrastination_screen.dart';
 
 import '../../../data/repositories/timetable_repository.dart';
-
 import '../college/attendance_screen.dart';
-import '../../../core/services/server_service.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -202,7 +200,6 @@ class _HomeTab extends ConsumerWidget {
                           ),
                         ),
                       ),
-                      const _ServerStatusIndicator(),
                     ],
                   ),
                 ].animate(interval: 100.ms).fadeIn().slideX(begin: -0.1),
@@ -594,83 +591,6 @@ class _QuickActionCard extends StatelessWidget {
             ),
           ],
         ),
-      ),
-    );
-  }
-}
-
-class _ServerStatusIndicator extends ConsumerWidget {
-  const _ServerStatusIndicator();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final serverState = ref.watch(serverServiceProvider);
-
-    Color color;
-    String label;
-    bool isPulsing = false;
-
-    switch (serverState.status) {
-      case ServerStatus.online:
-        color = Colors.green;
-        label = 'Online';
-        break;
-      case ServerStatus.waking:
-        color = Colors.orange;
-        label = 'Waking...';
-        isPulsing = true;
-        break;
-      case ServerStatus.offline:
-        color = Colors.red;
-        label = 'Offline';
-        break;
-      case ServerStatus.checking:
-        color = Colors.grey;
-        label = 'Checking...';
-        isPulsing = true;
-        break;
-    }
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withValues(alpha: 0.2)),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: 8,
-            height: 8,
-            decoration: BoxDecoration(
-              color: color,
-              shape: BoxShape.circle,
-            ),
-          )
-              .animate(
-                  onPlay: (controller) =>
-                      isPulsing ? controller.repeat() : null)
-              .scale(
-                  duration: 1000.ms,
-                  begin: const Offset(1, 1),
-                  end: const Offset(1.5, 1.5))
-              .then()
-              .scale(
-                  duration: 1000.ms,
-                  begin: const Offset(1.5, 1.5),
-                  end: const Offset(1, 1)),
-          const SizedBox(width: 8),
-          Text(
-            label,
-            style: GoogleFonts.inter(
-              fontSize: 11,
-              fontWeight: FontWeight.bold,
-              color: color,
-            ),
-          ),
-        ],
       ),
     );
   }

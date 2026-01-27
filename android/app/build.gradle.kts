@@ -45,7 +45,6 @@ flutter {
     source = "../.."
 }
 dependencies {
-    implementation("com.google.mediapipe:tasks-genai:0.10.14")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.0.4")
 }

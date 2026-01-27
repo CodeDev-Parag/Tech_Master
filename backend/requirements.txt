@@ -3,5 +3,7 @@ uvicorn
 langchain
 langchain-community
 langchain-ollama
+langchain-chroma
 chromadb
 pydantic
+pysqlite3-binary
