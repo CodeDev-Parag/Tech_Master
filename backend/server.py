@@ -113,10 +113,13 @@ async def train_knowledge_base(data: TrainRequest):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+from fastapi.responses import StreamingResponse
+import json
+
 @app.post("/chat")
 async def chat_endpoint(request: ChatRequest):
     """
-    Standard RAG Chat.
+    Standard RAG Chat with Streaming.
     """
     try:
         # 1. Retrieve relevant docs
@@ -130,11 +133,17 @@ async def chat_endpoint(request: ChatRequest):
             | StrOutputParser()
         )
         
-        # 3. Invoke
-        # For simple integration, we verify streaming support in Flutter first.
-        # Here we return full text for simplicity, or we can use StreamingResponse.
-        response = rag_chain.invoke(request.message)
-        return {"response": response}
+        # 3. Stream Generator
+        async def response_generator():
+            async for chunk in rag_chain.astream(request.message):
+                # Wrap text chunks in JSON or just raw text?
+                # Raw text is simplest for client stream processing.
+                # But let's send JSON lines for structure if needed.
+                # Actually, sending raw text is fine for a chat stream if MIME type is text/event-stream or plain.
+                # Let's use simple JSON lines to be safe against newlines.
+                yield json.dumps({"token": chunk}) + "\n"
+
+        return StreamingResponse(response_generator(), media_type="application/x-ndjson")
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

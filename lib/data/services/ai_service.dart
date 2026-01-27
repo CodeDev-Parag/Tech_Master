@@ -223,31 +223,27 @@ Rules:
         request.headers['Content-Type'] = 'application/json';
         request.body = body;
 
-        final response = await http.Client().send(request);
+        final client = http.Client();
+        final response = await client.send(request);
 
         if (response.statusCode == 200) {
-          final stream = response.stream.transform(utf8.decoder);
-          await for (final chunk in stream) {
-            // For simple JSON response: {"response": "text"}
-            // We can parse it, or if server serves text stream.
-            // Our current server returns JSON. Let's parse it wholly for now,
-            // but to support streaming properly, the server should yield text.
-            // Since server.py returns {"response": "text"}, we wait for full.
-            // To simulate streaming UI, we yield words.
+          final stream = response.stream
+              .transform(utf8.decoder)
+              .transform(const LineSplitter());
 
+          await for (final line in stream) {
+            if (line.trim().isEmpty) continue;
             try {
-              final data = jsonDecode(chunk);
-              if (data['response'] != null) {
-                final words = (data['response'] as String).split(' ');
-                for (final word in words) {
-                  await Future.delayed(const Duration(milliseconds: 30));
-                  yield "$word ";
-                }
+              final data = jsonDecode(line);
+              if (data['token'] != null) {
+                yield data['token'];
               }
             } catch (_) {
-              // May be partial chunk
+              // Swallow parsing errors for partial lines
             }
           }
+        } else {
+          yield "Server Error: ${response.statusCode}";
         }
       } catch (e) {
         yield "Server Error: $e. Using local fallback.";
