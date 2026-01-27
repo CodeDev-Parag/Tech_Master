@@ -41,11 +41,13 @@ class TimetableRepository {
 
   Future<void> addSession(ClassSession session) async {
     await _box?.put(session.id, session);
+    await syncSubjectsWithAttendance(); // Auto-sync on add
     await _scheduleNotification(session);
   }
 
   Future<void> updateSession(ClassSession session) async {
     await _box?.put(session.id, session);
+    await syncSubjectsWithAttendance(); // Auto-sync on update
     await _scheduleNotification(session);
   }
 
@@ -56,21 +58,21 @@ class TimetableRepository {
 
   Future<void> _scheduleNotification(ClassSession session) async {
     final attendanceRepo = AttendanceRepository();
-    await attendanceRepo.init();
-    final subjects = attendanceRepo.getAllSubjects();
+    final subjectId =
+        await attendanceRepo.ensureSubjectExists(session.subjectName);
 
-    // Find matching subject
-    final subject = subjects.firstWhere(
-      (s) => s.subjectName.toLowerCase() == session.subjectName.toLowerCase(),
-      orElse: () => subjects.firstWhere((s) => true,
-          orElse: () => throw Exception('No subjects found')),
-    );
-    // Actually, session should probably have a subjectId or we match by name.
-    // For now, match by name.
-    // If no subject found, handle gracefully or create one?
-    // Let's assume the user creates subject first.
+    await NotificationService.scheduleClassNotification(session, subjectId);
+  }
 
-    await NotificationService.scheduleClassNotification(session, subject.id);
+  Future<void> syncSubjectsWithAttendance() async {
+    if (_box == null) return;
+
+    final attendanceRepo = AttendanceRepository();
+    final uniqueSubjects = _box!.values.map((s) => s.subjectName).toSet();
+
+    for (var name in uniqueSubjects) {
+      await attendanceRepo.ensureSubjectExists(name);
+    }
   }
 
   Future<void> rescheduleAll() async {

@@ -41,6 +41,29 @@ class AttendanceRepository {
     await _box.add(newSubject);
   }
 
+  Future<String> ensureSubjectExists(String subjectName) async {
+    await init();
+    final existing = _box.values.where(
+      (s) => s.subjectName.toLowerCase() == subjectName.toLowerCase(),
+    );
+
+    if (existing.isNotEmpty) {
+      return existing.first.id;
+    }
+
+    final newId = const Uuid().v4();
+    final newSubject = SubjectAttendance(
+      id: newId,
+      subjectName: subjectName,
+      attendedClasses: 0,
+      totalClasses: 0,
+      targetPercentage: 75.0,
+      lastUpdated: DateTime.now(),
+    );
+    await _box.add(newSubject);
+    return newId;
+  }
+
   Future<void> deleteSubject(String id) async {
     final subject = _box.values.firstWhere((s) => s.id == id);
     await subject.delete();

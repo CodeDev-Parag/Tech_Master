@@ -71,8 +71,9 @@ void main() async {
         NotificationService.onDismissActionReceivedMethod,
   );
 
-  // Initial rescheduling (ensure all session notifications are set)
+  // Initial rescheduling  // Ensure all session notifications are scheduled
   await timetableRepo.rescheduleAll();
+  await timetableRepo.syncSubjectsWithAttendance(); // Sync attendance subjects
 
   final attendanceRepo = AttendanceRepository();
   await attendanceRepo.init();
