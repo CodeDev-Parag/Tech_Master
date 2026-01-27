@@ -22,10 +22,16 @@ app = FastAPI(title="Task Master AI Backend")
 # --- Middlewares ---
 @app.middleware("http")
 async def log_requests(request, call_next):
-    print(f"DEBUG: Incoming {request.method} request to {request.url.path}")
+    print(f"DEBUG: Incoming {request.method} request to {request.url.path} from {request.base_url}")
+    # Add explicit CORS headers for safety (especially for Web fallback)
     response = await call_next(request)
+    response.headers["Access-Control-Allow-Origin"] = "*"
+    response.headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS, PUT, DELETE"
+    response.headers["Access-Control-Allow-Headers"] = "*"
     print(f"DEBUG: Response status code: {response.status_code}")
     return response
+
+print(f"DEBUG: Server starting on port: {os.getenv('PORT', '8000')}")
 
 app.add_middleware(
     CORSMiddleware,

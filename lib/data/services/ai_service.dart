@@ -93,11 +93,21 @@ Rules:
         baseUrl = baseUrl.substring(0, baseUrl.length - 1);
 
       debugPrint('AI_DEBUG: Health Check URL: $baseUrl/health');
-      final response = await http
+      var response = await http
           .get(Uri.parse('$baseUrl/health'))
           .timeout(const Duration(seconds: 45));
 
       debugPrint('AI_DEBUG: Health Check Status: ${response.statusCode}');
+
+      // Fallback for 404 (maybe server version is old or routing issues)
+      if (response.statusCode == 404) {
+        debugPrint('AI_DEBUG: /health 404, trying root /');
+        response = await http
+            .get(Uri.parse(baseUrl))
+            .timeout(const Duration(seconds: 10));
+        debugPrint('AI_DEBUG: Root check status: ${response.statusCode}');
+      }
+
       if (response.statusCode != 200) {
         _lastHealthError = "Status Code: ${response.statusCode}";
       }
