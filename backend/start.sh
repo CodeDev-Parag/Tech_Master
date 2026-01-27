@@ -10,8 +10,11 @@ sleep 5
 # Pull the model (This usually takes time on first run)
 # We use 'llama3' as requested. Change to 'phi3' or 'tinyllama' for faster CPU performance.
 MODEL=${AI_MODEL:-"llama3"}
+EMBED_MODEL=${AI_EMBED_MODEL:-"nomic-embed-text"}
 echo "Pulling model: $MODEL"
 ollama pull $MODEL
+echo "Pulling embedding model: $EMBED_MODEL"
+ollama pull $EMBED_MODEL
 
 # Start FastAPI
 echo "Starting FastAPI..."

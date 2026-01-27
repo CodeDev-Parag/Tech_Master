@@ -14,8 +14,8 @@ from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.docstore.document import Document
 
 # --- Configuration ---
-MODEL_NAME = os.getenv("AI_MODEL", "llama3") # e.g. "phi3", "tinyllama"
-EMBEDDING_MODEL = "nomic-embed-text" # Or use same as model if supported, but nomic is better
+MODEL_NAME = os.getenv("AI_MODEL", "llama3") 
+EMBED_MODEL = os.getenv("AI_EMBED_MODEL", "nomic-embed-text")
 
 app = FastAPI(title="Task Master AI Backend")
 
@@ -30,7 +30,7 @@ app.add_middleware(
 
 # --- AI Components ---
 llm = OllamaLLM(model=MODEL_NAME)
-embeddings = OllamaEmbeddings(model=MODEL_NAME) # Using main model for embeddings simplifies setup
+embeddings = OllamaEmbeddings(model=EMBED_MODEL) 
 vector_store = Chroma(
     collection_name="task_master_data",
     embedding_function=embeddings,
