@@ -25,7 +25,6 @@ import 'data/repositories/settings_repository.dart';
 import 'data/services/local_ml_service.dart';
 import 'data/services/gamification_service.dart';
 import 'core/services/notification_service.dart';
-import 'core/services/secure_storage_service.dart';
 import 'presentation/providers/providers.dart';
 import 'presentation/screens/splash/splash_screen.dart';
 
