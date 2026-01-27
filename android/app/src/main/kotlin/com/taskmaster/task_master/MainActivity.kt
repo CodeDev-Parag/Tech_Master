@@ -16,6 +16,7 @@ class MainActivity : FlutterActivity() {
     private val STREAM_CHANNEL = "com.taskmaster.llm/stream"
     private var llmInference: LlmInference? = null
     private var eventSink: EventChannel.EventSink? = null
+    private var isGenerating = false
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
@@ -46,6 +47,9 @@ class MainActivity : FlutterActivity() {
                                 .setRandomSeed(101)
                                 .setResultListener { partialResponse, done ->
                                     runOnUiThread {
+                                        if (done) {
+                                            isGenerating = false
+                                        }
                                         if (eventSink != null) {
                                             if (done) {
                                                 eventSink?.success(mapOf("done" to true))
@@ -96,12 +100,21 @@ class MainActivity : FlutterActivity() {
                     if (prompt != null) {
                         val inference = llmInference
                         if (inference != null) {
+                            if (isGenerating) {
+                                result.error("BUSY", "Previous response still generating", null)
+                                return@setMethodCallHandler
+                            }
+
                             val formattedPrompt = "<start_of_turn>user\n$prompt\n<end_of_turn>model\n"
                             
-                            // Use generateResponseAsync for streaming (Listener handled in init)
-                            inference.generateResponseAsync(formattedPrompt)
-                            
-                            result.success(null) // Acknowledge start
+                            isGenerating = true
+                            try {
+                                inference.generateResponseAsync(formattedPrompt)
+                                result.success(null) 
+                            } catch (e: Exception) {
+                                isGenerating = false
+                                result.error("failed", e.message, null)
+                            }
                         } else {
                             result.error("NOT_INITIALIZED", "LLM is not initialized", null)
                         }

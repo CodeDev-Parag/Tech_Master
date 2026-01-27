@@ -89,6 +89,12 @@ class LlmService {
       await for (final chunk in controller.stream) {
         yield chunk;
       }
+    } on PlatformException catch (e) {
+      if (e.code == 'BUSY') {
+        yield "I'm still processing the previous message. Please wait a moment.";
+      } else {
+        yield "Connection Error: ${e.message}";
+      }
     } catch (e) {
       yield "Error: $e";
     } finally {
