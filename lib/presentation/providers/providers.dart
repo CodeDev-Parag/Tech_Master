@@ -120,7 +120,7 @@ class TasksNotifier extends StateNotifier<List<Task>> {
     if (autoCollect) {
       final mlService = _ref.read(localMLServiceProvider);
       // Fire and forget - don't await to avoid blocking UI
-      mlService.syncTrainingData();
+      mlService.syncTrainingData(_ref);
     }
   }
 

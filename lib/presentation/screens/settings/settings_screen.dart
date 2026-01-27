@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -84,7 +83,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                         );
                         // Trigger immediate sync
                         final mlService = ref.read(localMLServiceProvider);
-                        await mlService.syncTrainingData();
+                        await mlService.syncTrainingData(ref);
                       }
                     },
                   ),

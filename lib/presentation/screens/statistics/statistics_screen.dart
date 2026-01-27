@@ -221,8 +221,9 @@ class StatisticsScreen extends ConsumerWidget {
                                 sideTitles: SideTitles(
                                   showTitles: true,
                                   getTitlesWidget: (value, meta) {
-                                    if (value.toInt() >= history.length)
+                                    if (value.toInt() >= history.length) {
                                       return const SizedBox();
+                                    }
                                     final date = history[value.toInt()]['date']
                                         as DateTime;
                                     return Padding(
@@ -427,8 +428,9 @@ class StatisticsScreen extends ConsumerWidget {
   String _getCompletionMessage(double rate) {
     if (rate >= 80) return 'Excellent productivity! Keep it up! 🎉';
     if (rate >= 50) return 'Good progress! You can do even better! 💪';
-    if (rate >= 25)
+    if (rate >= 25) {
       return 'Getting started! Focus on completing more tasks. 📈';
+    }
     return 'Time to boost your productivity! 🚀';
   }
 }

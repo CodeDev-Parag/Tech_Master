@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
+import '../../core/services/server_service.dart';
 import '../models/task.dart';
 import '../../core/constants/app_constants.dart';
 
@@ -68,14 +69,14 @@ class LocalMLService {
     for (var task in userTasks) {
       if (task.title.isNotEmpty) {
         _trainSingle(
-          task.title + " " + (task.description ?? ""),
+          "${task.title} ${task.description ?? ""}",
           category: task.categoryId,
           priority: task.priority,
         );
       }
     }
 
-    print("ML Service Trained on ${_totalTasks} items.");
+    print("ML Service Trained on $_totalTasks items.");
   }
 
   void _trainSingle(String text, {String? category, Priority? priority}) {
@@ -223,17 +224,26 @@ class LocalMLService {
   }
 
   /// Syncs the current model weights to the collection backend
-  Future<void> syncTrainingData() async {
+  Future<bool> syncTrainingData(dynamic ref) async {
     final data = exportTrainingData();
     try {
-      await http.post(
+      final response = await http.post(
         Uri.parse(AppConstants.dataCollectionServerUrl),
         headers: {'Content-Type': 'application/json'},
         body: data,
       );
-      print('Training data synced to backend!');
+
+      // Trigger a status refresh on sync success
+      ref.read(serverServiceProvider).checkHealth();
+
+      if (response.statusCode == 200) {
+        print('Training data synced to backend!');
+        return true;
+      }
+      return false;
     } catch (e) {
       print('Failed to sync training data: $e');
+      return false;
     }
   }
 

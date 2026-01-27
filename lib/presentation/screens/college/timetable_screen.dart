@@ -5,7 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:iconsax/iconsax.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../data/models/timetable.dart';
-import '../../../main.dart'; // For repositories
+import '../../../data/repositories/timetable_repository.dart';
 import '../../providers/providers.dart';
 
 // Provider for fetching sessions
@@ -146,7 +146,7 @@ class _TimetableScreenState extends ConsumerState<TimetableScreen>
               borderRadius: BorderRadius.circular(12),
             ),
             child: Text(
-              '${session.startTime.format(context)}',
+              session.startTime.format(context),
               style: GoogleFonts.inter(
                 fontWeight: FontWeight.bold,
                 color: session.color,

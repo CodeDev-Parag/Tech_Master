@@ -87,7 +87,7 @@ void main() async {
   });
 
   // Combine headers and handlers
-  final handler = Pipeline()
+  final handler = const Pipeline()
       .addMiddleware(logRequests())
       .addMiddleware(corsMiddleware()) // Use our manual middleware
       .addHandler(router.call);

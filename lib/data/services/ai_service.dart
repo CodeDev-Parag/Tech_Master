@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/task.dart';
 import 'local_ml_service.dart';
+import '../../core/services/llm_service.dart';
 
 class ParsedTask {
   final String title;
@@ -36,6 +37,7 @@ class ProductivityInsight {
 
 class AIService extends ChangeNotifier {
   final LocalMLService _mlService;
+  final LlmService _llmService = LlmService();
 
   AIService(this._mlService);
 
@@ -62,8 +64,18 @@ Operational Rules:
   bool get isConfigured => true;
 
   Future<void> init() async {
-    // No initialization needed for local mode
+    // Attempt to initialize LLM with a default path if it exists
+    // Path recommended by Google AI Edge Gallery for local testing
+    const defaultModelPath = '/data/local/tmp/gemma-2b-it-cpu-int4.bin';
+    await _llmService.initialize(defaultModelPath);
   }
+
+  Future<void> initializeLLM(String modelPath) async {
+    await _llmService.initialize(modelPath);
+    notifyListeners();
+  }
+
+  bool get isLLMReady => _llmService.isInitialized;
 
   /// Trains the local AI model on the user's dataset
   void trainModel(List<Task> tasks) {
@@ -87,7 +99,15 @@ Operational Rules:
 
   /// Simulates a chat response using local logic
   Future<String> chat(String message, {String? context}) async {
-    // Simulate thinking time
+    // 1. Try Local LLM (Gemma) first if ready
+    if (isLLMReady) {
+      final response = await _llmService.generateResponse(message);
+      if (response != null && response.isNotEmpty) {
+        return response;
+      }
+    }
+
+    // 2. Fallback to rule-based logic (original Architect persona)
     await Future.delayed(const Duration(milliseconds: 600));
 
     final lower = message.toLowerCase();

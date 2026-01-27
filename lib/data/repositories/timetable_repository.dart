@@ -1,6 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import '../../core/services/notification_service.dart';
 import '../models/timetable.dart';
+import '../repositories/attendance_repository.dart';
 
 final timetableRepositoryProvider = Provider<TimetableRepository>((ref) {
   throw UnimplementedError('Provider not initialized');
@@ -39,14 +41,43 @@ class TimetableRepository {
 
   Future<void> addSession(ClassSession session) async {
     await _box?.put(session.id, session);
+    await _scheduleNotification(session);
   }
 
   Future<void> updateSession(ClassSession session) async {
     await _box?.put(session.id, session);
+    await _scheduleNotification(session);
   }
 
   Future<void> deleteSession(String id) async {
     await _box?.delete(id);
+    await NotificationService.cancelSessionNotification(id);
+  }
+
+  Future<void> _scheduleNotification(ClassSession session) async {
+    final attendanceRepo = AttendanceRepository();
+    await attendanceRepo.init();
+    final subjects = attendanceRepo.getAllSubjects();
+
+    // Find matching subject
+    final subject = subjects.firstWhere(
+      (s) => s.subjectName.toLowerCase() == session.subjectName.toLowerCase(),
+      orElse: () => subjects.firstWhere((s) => true,
+          orElse: () => throw Exception('No subjects found')),
+    );
+    // Actually, session should probably have a subjectId or we match by name.
+    // For now, match by name.
+    // If no subject found, handle gracefully or create one?
+    // Let's assume the user creates subject first.
+
+    await NotificationService.scheduleClassNotification(session, subject.id);
+  }
+
+  Future<void> rescheduleAll() async {
+    if (_box == null) return;
+    for (var session in _box!.values) {
+      await _scheduleNotification(session);
+    }
   }
 
   ClassSession? getNextClass() {

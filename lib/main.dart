@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:awesome_notifications/awesome_notifications.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive_flutter/hive_flutter.dart';
@@ -18,8 +19,12 @@ import 'data/repositories/note_repository.dart';
 import 'data/models/timetable.dart';
 import 'data/repositories/timetable_repository.dart';
 
+import 'data/models/subject_attendance.dart';
+import 'data/repositories/attendance_repository.dart';
+
 import 'data/services/local_ml_service.dart';
 import 'data/services/gamification_service.dart';
+import 'core/services/notification_service.dart';
 import 'presentation/providers/providers.dart';
 import 'presentation/screens/splash/splash_screen.dart';
 
@@ -39,6 +44,7 @@ void main() async {
   Hive.registerAdapter(NoteAdapter());
   Hive.registerAdapter(UserStatsAdapter());
   Hive.registerAdapter(ClassSessionAdapter());
+  Hive.registerAdapter(SubjectAttendanceAdapter());
 
   // Initialize repositories
   final taskRepo = TaskRepository();
@@ -52,6 +58,24 @@ void main() async {
 
   final timetableRepo = TimetableRepository();
   await timetableRepo.init();
+
+  // Initialize Notifications
+  await NotificationService.initializeNotification();
+  AwesomeNotifications().setListeners(
+    onActionReceivedMethod: NotificationService.onActionReceivedMethod,
+    onNotificationCreatedMethod:
+        NotificationService.onNotificationCreatedMethod,
+    onNotificationDisplayedMethod:
+        NotificationService.onNotificationDisplayedMethod,
+    onDismissActionReceivedMethod:
+        NotificationService.onDismissActionReceivedMethod,
+  );
+
+  // Initial rescheduling (ensure all session notifications are set)
+  await timetableRepo.rescheduleAll();
+
+  final attendanceRepo = AttendanceRepository();
+  await attendanceRepo.init();
 
   // Initialize AI service
   final localMLService = LocalMLService();
@@ -78,6 +102,7 @@ void main() async {
         categoryRepositoryProvider.overrideWithValue(categoryRepo),
         noteRepositoryProvider.overrideWithValue(noteRepo),
         timetableRepositoryProvider.overrideWithValue(timetableRepo),
+        attendanceRepositoryProvider.overrideWithValue(attendanceRepo),
         aiServiceProvider.overrideWith((ref) => aiService),
         aiConfiguredProvider.overrideWith((ref) => aiService.isConfigured),
         gamificationServiceProvider.overrideWith((ref) => gamificationService),
