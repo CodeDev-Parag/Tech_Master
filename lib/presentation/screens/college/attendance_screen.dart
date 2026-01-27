@@ -181,9 +181,10 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
           ),
           FilledButton(
             onPressed: () async {
-              if (nameController.text.isNotEmpty) {
+              final sanitizedName = nameController.text.trim();
+              if (sanitizedName.isNotEmpty) {
                 await repo.addSubject(
-                  nameController.text,
+                  sanitizedName,
                   target: double.tryParse(targetController.text) ?? 75.0,
                   attended: int.tryParse(attendedController.text) ?? 0,
                   total: int.tryParse(totalController.text) ?? 0,

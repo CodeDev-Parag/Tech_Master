@@ -68,7 +68,8 @@ class TimetableRepository {
     if (_box == null) return;
 
     final attendanceRepo = AttendanceRepository();
-    final uniqueSubjects = _box!.values.map((s) => s.subjectName).toSet();
+    final uniqueSubjects =
+        _box!.values.map((s) => s.subjectName.trim()).toSet();
 
     for (var name in uniqueSubjects) {
       await attendanceRepo.ensureSubjectExists(name);

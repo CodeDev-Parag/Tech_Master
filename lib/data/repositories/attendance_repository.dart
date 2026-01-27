@@ -30,9 +30,10 @@ class AttendanceRepository {
 
   Future<void> addSubject(String subjectName,
       {double target = 75.0, int attended = 0, int total = 0}) async {
+    final sanitizedName = subjectName.trim();
     final newSubject = SubjectAttendance(
       id: const Uuid().v4(),
-      subjectName: subjectName,
+      subjectName: sanitizedName,
       attendedClasses: attended,
       totalClasses: total,
       targetPercentage: target,
@@ -43,8 +44,9 @@ class AttendanceRepository {
 
   Future<String> ensureSubjectExists(String subjectName) async {
     await init();
+    final sanitizedName = subjectName.trim();
     final existing = _box.values.where(
-      (s) => s.subjectName.toLowerCase() == subjectName.toLowerCase(),
+      (s) => s.subjectName.toLowerCase() == sanitizedName.toLowerCase(),
     );
 
     if (existing.isNotEmpty) {
@@ -54,7 +56,7 @@ class AttendanceRepository {
     final newId = const Uuid().v4();
     final newSubject = SubjectAttendance(
       id: newId,
-      subjectName: subjectName,
+      subjectName: sanitizedName,
       attendedClasses: 0,
       totalClasses: 0,
       targetPercentage: 75.0,

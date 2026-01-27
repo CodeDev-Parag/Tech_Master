@@ -214,15 +214,17 @@ class _AddClassDialogState extends State<_AddClassDialog> {
   final _roomController = TextEditingController();
   final _professorController = TextEditingController();
 
-  late int _selectedDay;
+  late Set<int> _selectedDays;
   TimeOfDay _startTime = const TimeOfDay(hour: 9, minute: 0);
   TimeOfDay _endTime = const TimeOfDay(hour: 10, minute: 0);
   Color _selectedColor = Colors.blue;
 
+  final List<String> _days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+
   @override
   void initState() {
     super.initState();
-    _selectedDay = widget.initialDay;
+    _selectedDays = {widget.initialDay};
   }
 
   @override
@@ -234,12 +236,17 @@ class _AddClassDialogState extends State<_AddClassDialog> {
           key: _formKey,
           child: Column(
             mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               TextFormField(
                 controller: _subjectController,
-                decoration: const InputDecoration(labelText: 'Subject Name'),
-                validator: (v) => v!.isEmpty ? 'Required' : null,
+                decoration: const InputDecoration(
+                  labelText: 'Subject Name',
+                  hintText: 'e.g. Mathematics',
+                ),
+                validator: (v) => v!.trim().isEmpty ? 'Required' : null,
               ),
+              const SizedBox(height: 8),
               TextFormField(
                 controller: _roomController,
                 decoration: const InputDecoration(labelText: 'Room (Optional)'),
@@ -250,51 +257,96 @@ class _AddClassDialogState extends State<_AddClassDialog> {
                     const InputDecoration(labelText: 'Professor (Optional)'),
               ),
               const SizedBox(height: 16),
+              const Text('Select Days',
+                  style: TextStyle(fontWeight: FontWeight.bold)),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 8,
+                runSpacing: 0,
+                children: List.generate(7, (index) {
+                  final dayNum = index + 1;
+                  final isSelected = _selectedDays.contains(dayNum);
+                  return FilterChip(
+                    label: Text(_days[index]),
+                    selected: isSelected,
+                    onSelected: (selected) {
+                      setState(() {
+                        if (selected) {
+                          _selectedDays.add(dayNum);
+                        } else {
+                          if (_selectedDays.length > 1) {
+                            _selectedDays.remove(dayNum);
+                          }
+                        }
+                      });
+                    },
+                  );
+                }),
+              ),
+              const SizedBox(height: 16),
               Row(
                 children: [
                   Expanded(
-                    child: TextButton(
+                    child: TextButton.icon(
+                      icon: const Icon(Iconsax.clock, size: 18),
                       onPressed: () async {
                         final t = await showTimePicker(
                             context: context, initialTime: _startTime);
                         if (t != null) setState(() => _startTime = t);
                       },
-                      child: Text('Start: ${_startTime.format(context)}'),
+                      label: Text('Start: ${_startTime.format(context)}'),
                     ),
                   ),
                   Expanded(
-                    child: TextButton(
+                    child: TextButton.icon(
+                      icon: const Icon(Iconsax.clock, size: 18),
                       onPressed: () async {
                         final t = await showTimePicker(
                             context: context, initialTime: _endTime);
                         if (t != null) setState(() => _endTime = t);
                       },
-                      child: Text('End: ${_endTime.format(context)}'),
+                      label: Text('End: ${_endTime.format(context)}'),
                     ),
                   ),
                 ],
               ),
-              // Simple Color Picker
+              const SizedBox(height: 16),
+              const Text('Label Color',
+                  style: TextStyle(fontWeight: FontWeight.bold)),
+              const SizedBox(height: 8),
               Wrap(
                 children: [
                   Colors.blue,
                   Colors.red,
                   Colors.green,
                   Colors.orange,
-                  Colors.purple
+                  Colors.purple,
+                  Colors.teal,
+                  Colors.pink,
                 ].map((c) {
                   return InkWell(
                     onTap: () => setState(() => _selectedColor = c),
                     child: Container(
-                      width: 24,
-                      height: 24,
+                      width: 28,
+                      height: 28,
                       margin: const EdgeInsets.all(4),
                       decoration: BoxDecoration(
                         color: c,
                         shape: BoxShape.circle,
-                        border:
-                            _selectedColor == c ? Border.all(width: 2) : null,
+                        border: _selectedColor == c
+                            ? Border.all(color: Colors.white, width: 2)
+                            : null,
+                        boxShadow: _selectedColor == c
+                            ? [
+                                BoxShadow(
+                                    color: c.withOpacity(0.4), blurRadius: 4)
+                              ]
+                            : null,
                       ),
+                      child: _selectedColor == c
+                          ? const Icon(Icons.check,
+                              size: 16, color: Colors.white)
+                          : null,
                     ),
                   );
                 }).toList(),
@@ -309,27 +361,31 @@ class _AddClassDialogState extends State<_AddClassDialog> {
             child: const Text('Cancel')),
         FilledButton(
           onPressed: () {
-            if (_formKey.currentState!.validate()) {
-              final newClass = ClassSession(
-                id: DateTime.now().toIso8601String(),
-                subjectName: _subjectController.text,
-                roomNumber:
-                    _roomController.text.isEmpty ? null : _roomController.text,
-                professorName: _professorController.text.isEmpty
-                    ? null
-                    : _professorController.text,
-                startTimeHour: _startTime.hour,
-                startTimeMinute: _startTime.minute,
-                endTimeHour: _endTime.hour,
-                endTimeMinute: _endTime.minute,
-                dayOfWeek: _selectedDay,
-                colorValue: _selectedColor.value,
-              );
-              widget.repo.addSession(newClass);
+            if (_formKey.currentState!.validate() && _selectedDays.isNotEmpty) {
+              final baseId = DateTime.now().millisecondsSinceEpoch;
+              for (var day in _selectedDays) {
+                final newClass = ClassSession(
+                  id: '${baseId}_$day',
+                  subjectName: _subjectController.text.trim(),
+                  roomNumber: _roomController.text.trim().isEmpty
+                      ? null
+                      : _roomController.text.trim(),
+                  professorName: _professorController.text.trim().isEmpty
+                      ? null
+                      : _professorController.text.trim(),
+                  startTimeHour: _startTime.hour,
+                  startTimeMinute: _startTime.minute,
+                  endTimeHour: _endTime.hour,
+                  endTimeMinute: _endTime.minute,
+                  dayOfWeek: day,
+                  colorValue: _selectedColor.value,
+                );
+                widget.repo.addSession(newClass);
+              }
               Navigator.pop(context);
             }
           },
-          child: const Text('Add'),
+          child: const Text('Add Class'),
         ),
       ],
     );
