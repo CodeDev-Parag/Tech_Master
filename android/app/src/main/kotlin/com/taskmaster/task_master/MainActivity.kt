@@ -43,7 +43,7 @@ class MainActivity : FlutterActivity() {
                             val options = LlmInference.LlmInferenceOptions.builder()
                                 .setModelPath(modelPath)
                                 .setMaxTokens(512)
-                                .setTemperature(0.7f)
+                                .setTemperature(0.4f) // Lower temperature for more focused/less random output
                                 .setRandomSeed(101)
                                 .setResultListener { partialResponse, done ->
                                     runOnUiThread {
@@ -105,7 +105,9 @@ class MainActivity : FlutterActivity() {
                                 return@setMethodCallHandler
                             }
 
-                            val formattedPrompt = "<start_of_turn>user\n$prompt\n<end_of_turn>model\n"
+                            val systemPrompt = "You are a helpful AI assistant named Task Master. Answer clearly and concisely in English only."
+                            val fullPrompt = "$systemPrompt\n\nUser: $prompt"
+                            val formattedPrompt = "<start_of_turn>user\n$fullPrompt\n<end_of_turn>model\n"
                             
                             isGenerating = true
                             try {
