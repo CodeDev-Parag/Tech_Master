@@ -74,6 +74,11 @@ custom_rag_prompt = ChatPromptTemplate.from_template(template)
 
 # --- Endpoints ---
 
+@app.get("/")
+async def root():
+    """Root endpoint for status check."""
+    return {"status": "Task Master AI Backend is Online", "model": MODEL_NAME}
+
 @app.get("/health")
 async def health_check():
     """Verify server is alive and reachable."""

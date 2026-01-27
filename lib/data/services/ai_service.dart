@@ -77,14 +77,22 @@ Rules:
   Future<bool> checkServerHealth() async {
     if (!_settingsRepo.useCustomServer) return false;
     try {
-      String baseUrl = _settingsRepo.serverIp;
-      if (!baseUrl.startsWith('http')) baseUrl = 'http://$baseUrl:8000';
+      String baseUrl = _settingsRepo.serverIp.trim();
+      if (!baseUrl.startsWith('http')) {
+        if (baseUrl.contains('render.com') ||
+            baseUrl.contains('railway.app') ||
+            baseUrl.contains('herokuapp.com')) {
+          baseUrl = 'https://$baseUrl';
+        } else {
+          baseUrl = 'http://$baseUrl:8000';
+        }
+      }
       if (baseUrl.endsWith('/'))
         baseUrl = baseUrl.substring(0, baseUrl.length - 1);
 
-      final response = await http
-          .get(Uri.parse('$baseUrl/health'))
-          .timeout(const Duration(seconds: 5));
+      debugPrint('AI_DEBUG: Health Check URL: $baseUrl/health');
+      final response = await http.get(Uri.parse('$baseUrl/health')).timeout(
+          const Duration(seconds: 45)); // Increased to 45s for cold start
 
       debugPrint('AI_DEBUG: Health Check Status: ${response.statusCode}');
       return response.statusCode == 200;
@@ -103,11 +111,21 @@ Rules:
     if (!_settingsRepo.useCustomServer) return;
 
     try {
-      String baseUrl = _settingsRepo.serverIp;
-      // Normalization: Ensure valid URI
+      String baseUrl = _settingsRepo.serverIp.trim();
+
+      // Normalization: Ensure valid URI and handle Cloud domains
       if (!baseUrl.startsWith('http')) {
-        baseUrl = 'http://$baseUrl:8000'; // Default to local format if just IP
+        final isCloud = baseUrl.contains('render.com') ||
+            baseUrl.contains('railway.app') ||
+            baseUrl.contains('herokuapp.com');
+
+        if (isCloud) {
+          baseUrl = 'https://$baseUrl'; // Default to HTTPS for cloud
+        } else {
+          baseUrl = 'http://$baseUrl:8000'; // Default to HTTP/Port for local
+        }
       }
+
       // Remove trailing slash if present
       if (baseUrl.endsWith('/')) {
         baseUrl = baseUrl.substring(0, baseUrl.length - 1);
@@ -235,19 +253,24 @@ Rules:
 
       // 1. Server Mode
       try {
-        String baseUrl = _settingsRepo.serverIp;
-        debugPrint('AI_DEBUG: Raw Server IP from Settings: $baseUrl');
+        String baseUrl = _settingsRepo.serverIp.trim();
+        debugPrint('AI_DEBUG: Raw Server Info: $baseUrl');
 
         if (!baseUrl.startsWith('http')) {
-          baseUrl = 'http://$baseUrl:8000';
-          debugPrint('AI_DEBUG: Normalized IP to: $baseUrl');
+          if (baseUrl.contains('render.com') ||
+              baseUrl.contains('railway.app') ||
+              baseUrl.contains('herokuapp.com')) {
+            baseUrl = 'https://$baseUrl';
+          } else {
+            baseUrl = 'http://$baseUrl:8000';
+          }
         }
         if (baseUrl.endsWith('/')) {
           baseUrl = baseUrl.substring(0, baseUrl.length - 1);
         }
 
         final url = Uri.parse('$baseUrl/chat');
-        debugPrint('AI_DEBUG: Prepared URL: $url');
+        debugPrint('AI_DEBUG: Final Chat URL: $url');
 
         // Check if message is JSON (hack for direct RAG tests) or just text
         final body = jsonEncode({'message': message});
