@@ -79,11 +79,28 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
               ).animate().fadeIn(),
             );
           }
+          // Calculate Overall Stats
+          int totalAttended = 0;
+          int totalClasses = 0;
+          for (var s in subjects) {
+            totalAttended += s.attendedClasses;
+            totalClasses += s.totalClasses;
+          }
+          final double overallPercentage =
+              totalClasses == 0 ? 100.0 : (totalAttended / totalClasses) * 100;
+
           return ListView.builder(
             padding: const EdgeInsets.all(16),
-            itemCount: subjects.length,
+            itemCount: subjects.length + 1,
             itemBuilder: (context, index) {
-              final subject = subjects[index];
+              if (index == 0) {
+                return _OverallAttendanceCard(
+                  overallPercentage: overallPercentage,
+                  totalAttended: totalAttended,
+                  totalClasses: totalClasses,
+                );
+              }
+              final subject = subjects[index - 1];
               return _AttendanceCard(
                 subject: subject,
                 repo: repo,
@@ -258,8 +275,8 @@ class _AttendanceCard extends StatelessWidget {
                         const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                     decoration: BoxDecoration(
                       color: isSafe
-                          ? Colors.green.withValues(alpha: 0.1)
-                          : Colors.red.withValues(alpha: 0.1),
+                          ? Colors.green.withOpacity(0.1)
+                          : Colors.red.withOpacity(0.1),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Text(
@@ -280,7 +297,7 @@ class _AttendanceCard extends StatelessWidget {
                 borderRadius: BorderRadius.circular(4),
                 child: LinearProgressIndicator(
                   value: percentage / 100,
-                  backgroundColor: theme.disabledColor.withValues(alpha: 0.1),
+                  backgroundColor: theme.disabledColor.withOpacity(0.1),
                   color: isSafe ? Colors.green : Colors.red,
                   minHeight: 8,
                 ),
@@ -296,8 +313,8 @@ class _AttendanceCard extends StatelessWidget {
                     'Attended: ${subject.attendedClasses} / ${subject.totalClasses}',
                     style: GoogleFonts.inter(
                       fontSize: 14,
-                      color: theme.textTheme.bodyMedium?.color
-                          ?.withValues(alpha: 0.7),
+                      color:
+                          theme.textTheme.bodyMedium?.color?.withOpacity(0.7),
                     ),
                   ),
                   Row(
@@ -401,6 +418,165 @@ class _AttendanceCard extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _OverallAttendanceCard extends StatelessWidget {
+  final double overallPercentage;
+  final int totalAttended;
+  final int totalClasses;
+
+  const _OverallAttendanceCard({
+    required this.overallPercentage,
+    required this.totalAttended,
+    required this.totalClasses,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final isSafe = overallPercentage >= 75.0;
+    final color = isSafe ? Colors.green : Colors.red;
+
+    return Card(
+      margin: const EdgeInsets.only(bottom: 24),
+      elevation: 4,
+      shadowColor: color.withOpacity(0.3),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(20),
+        side: BorderSide(color: color.withOpacity(0.2), width: 1),
+      ),
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(20),
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              color.withOpacity(0.05),
+              color.withOpacity(0.15),
+            ],
+          ),
+        ),
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Overall Attendance',
+                      style: GoogleFonts.inter(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.grey[700],
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      isSafe ? 'You are Safe!' : 'You need to attend more!',
+                      style: GoogleFonts.inter(
+                        fontSize: 14,
+                        color: color,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: color,
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: [
+                      BoxShadow(
+                        color: color.withOpacity(0.4),
+                        blurRadius: 8,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: Text(
+                    '${overallPercentage.toStringAsFixed(1)}%',
+                    style: GoogleFonts.inter(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 20),
+            Row(
+              children: [
+                Expanded(
+                  child: _buildStatItem(
+                    'Total Classes',
+                    '$totalClasses',
+                    Iconsax.book,
+                    Colors.blue,
+                  ),
+                ),
+                Container(
+                  width: 1,
+                  height: 40,
+                  color: Colors.grey[300],
+                ),
+                Expanded(
+                  child: _buildStatItem(
+                    'Attended',
+                    '$totalAttended',
+                    Iconsax.user_tick,
+                    Colors.green,
+                  ),
+                ),
+                Container(
+                  width: 1,
+                  height: 40,
+                  color: Colors.grey[300],
+                ),
+                Expanded(
+                  child: _buildStatItem(
+                    'Missed',
+                    '${totalClasses - totalAttended}',
+                    Iconsax.user_remove,
+                    Colors.red,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    ).animate().fadeIn(duration: 500.ms).slideY(begin: 0.2);
+  }
+
+  Widget _buildStatItem(
+      String label, String value, IconData icon, Color color) {
+    return Column(
+      children: [
+        Icon(icon, size: 20, color: color),
+        const SizedBox(height: 4),
+        Text(
+          value,
+          style: GoogleFonts.inter(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        Text(
+          label,
+          style: GoogleFonts.inter(
+            fontSize: 12,
+            color: Colors.grey[600],
+          ),
+        ),
+      ],
     );
   }
 }
