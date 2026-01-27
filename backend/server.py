@@ -19,7 +19,14 @@ EMBED_MODEL = os.getenv("AI_EMBED_MODEL", "nomic-embed-text")
 
 app = FastAPI(title="Task Master AI Backend")
 
-# --- CORS (Allow Mobile Access) ---
+# --- Middlewares ---
+@app.middleware("http")
+async def log_requests(request, call_next):
+    print(f"DEBUG: Incoming {request.method} request to {request.url.path}")
+    response = await call_next(request)
+    print(f"DEBUG: Response status code: {response.status_code}")
+    return response
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],

@@ -73,9 +73,11 @@ Rules:
   }
 
   bool get isLLMReady => _llmService.isInitialized;
+  String? _lastHealthError;
 
   Future<bool> checkServerHealth() async {
     if (!_settingsRepo.useCustomServer) return false;
+    _lastHealthError = null;
     try {
       String baseUrl = _settingsRepo.serverIp.trim();
       if (!baseUrl.startsWith('http')) {
@@ -91,12 +93,17 @@ Rules:
         baseUrl = baseUrl.substring(0, baseUrl.length - 1);
 
       debugPrint('AI_DEBUG: Health Check URL: $baseUrl/health');
-      final response = await http.get(Uri.parse('$baseUrl/health')).timeout(
-          const Duration(seconds: 45)); // Increased to 45s for cold start
+      final response = await http
+          .get(Uri.parse('$baseUrl/health'))
+          .timeout(const Duration(seconds: 45));
 
       debugPrint('AI_DEBUG: Health Check Status: ${response.statusCode}');
+      if (response.statusCode != 200) {
+        _lastHealthError = "Status Code: ${response.statusCode}";
+      }
       return response.statusCode == 200;
     } catch (e) {
+      _lastHealthError = e.toString();
       debugPrint('AI_DEBUG: Health Check Failed: $e');
       return false;
     }
@@ -247,7 +254,10 @@ Rules:
       // Check health first to see if server is up
       final isAlive = await checkServerHealth();
       if (!isAlive) {
-        yield "⚠️ Server is currently unreachable or starting up. Please wait a moment and try again.";
+        final errorDetail =
+            _lastHealthError != null ? "\nDetails: $_lastHealthError" : "";
+        yield "⚠️ Server is currently unreachable or starting up. Please wait a moment and try again.$errorDetail";
+        debugPrint('AI_DEBUG: Health Check failed, skipping chat request.');
         return;
       }
 
