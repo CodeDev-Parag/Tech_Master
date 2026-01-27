@@ -178,9 +178,9 @@ Operational Rules:
       final apiKey = await _secureStorage.getApiKey();
       if (apiKey != null && apiKey.isNotEmpty) {
         try {
-          // Initialize Gemini (Gemini 1.5 Flash is fast and free-tier eligible)
+          // Initialize Gemini (Using 'gemini-pro' for maximum compatibility)
           final model = GenerativeModel(
-            model: 'gemini-1.5-flash',
+            model: 'gemini-pro',
             apiKey: apiKey,
           );
 
