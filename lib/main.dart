@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:awesome_notifications/awesome_notifications.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive_flutter/hive_flutter.dart';
@@ -61,15 +60,6 @@ void main() async {
 
   // Initialize Notifications
   await NotificationService.initializeNotification();
-  AwesomeNotifications().setListeners(
-    onActionReceivedMethod: NotificationService.onActionReceivedMethod,
-    onNotificationCreatedMethod:
-        NotificationService.onNotificationCreatedMethod,
-    onNotificationDisplayedMethod:
-        NotificationService.onNotificationDisplayedMethod,
-    onDismissActionReceivedMethod:
-        NotificationService.onDismissActionReceivedMethod,
-  );
 
   // Initial rescheduling  // Ensure all session notifications are scheduled
   await timetableRepo.rescheduleAll();

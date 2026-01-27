@@ -1,130 +1,141 @@
-import 'package:awesome_notifications/awesome_notifications.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:timezone/data/latest_all.dart' as tz;
+import 'package:timezone/timezone.dart' as tz;
+import 'package:flutter_timezone/flutter_timezone.dart';
 import 'package:flutter/material.dart';
 import '../../data/models/timetable.dart';
 import '../../data/repositories/attendance_repository.dart';
 
 class NotificationService {
+  static final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
+      FlutterLocalNotificationsPlugin();
+
   static Future<void> initializeNotification() async {
-    await AwesomeNotifications().initialize(
-      null,
-      [
-        NotificationChannel(
-          channelGroupKey: 'attendance_channel_group',
-          channelKey: 'attendance_channel',
-          channelName: 'Attendance Notifications',
-          channelDescription: 'Notifications for upcoming classes',
-          defaultColor: const Color(0xFF9D50BB),
-          ledColor: Colors.white,
-          importance: NotificationImportance.High,
-          channelShowBadge: true,
-          onlyAlertOnce: true,
-          playSound: true,
-          criticalAlerts: true,
-        )
-      ],
-      channelGroups: [
-        NotificationChannelGroup(
-          channelGroupKey: 'attendance_channel_group',
-          channelGroupName: 'Attendance group',
-        )
-      ],
-      debug: true,
+    tz.initializeTimeZones();
+    final String timeZoneName = await FlutterTimezone.getLocalTimezone();
+    try {
+      tz.setLocalLocation(tz.getLocation(timeZoneName));
+    } catch (e) {
+      // Fallback if timezone not found (e.g. emulator)
+      tz.setLocalLocation(tz.local);
+    }
+
+    const AndroidInitializationSettings initializationSettingsAndroid =
+        AndroidInitializationSettings('@mipmap/ic_launcher');
+
+    const InitializationSettings initializationSettings =
+        InitializationSettings(android: initializationSettingsAndroid);
+
+    await flutterLocalNotificationsPlugin.initialize(
+      initializationSettings,
+      onDidReceiveNotificationResponse: onDidReceiveNotificationResponse,
+      onDidReceiveBackgroundNotificationResponse: notificationTapBackground,
+    );
+    // Create a channel for attendance
+    const AndroidNotificationChannel channel = AndroidNotificationChannel(
+      'attendance_channel', // id
+      'Attendance Notifications', // title
+      description: 'Notifications for upcoming classes', // description
+      importance: Importance.max,
+      playSound: true,
+      enableLights: true,
+      ledColor: Color(0xFF9D50BB),
     );
 
-    // Get permission
-    bool isAllowed = await AwesomeNotifications().isNotificationAllowed();
-    if (!isAllowed) {
-      await AwesomeNotifications().requestPermissionToSendNotifications();
-    }
+    await flutterLocalNotificationsPlugin
+        .resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin>()
+        ?.createNotificationChannel(channel);
+
+    // Request permissions
+    await flutterLocalNotificationsPlugin
+        .resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin>()
+        ?.requestNotificationsPermission();
+    await flutterLocalNotificationsPlugin
+        .resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin>()
+        ?.requestExactAlarmsPermission();
   }
 
-  /// Use this method to detect when a new notification or a schedule is created
-  @pragma("vm:entry-point")
-  static Future<void> onNotificationCreatedMethod(
-      ReceivedNotification receivedNotification) async {
-    // Your code goes here
+  @pragma('vm:entry-point')
+  static void notificationTapBackground(
+      NotificationResponse notificationResponse) {
+    onDidReceiveNotificationResponse(notificationResponse);
   }
 
-  /// Use this method to detect every time that a new notification is displayed
-  @pragma("vm:entry-point")
-  static Future<void> onNotificationDisplayedMethod(
-      ReceivedNotification receivedNotification) async {
-    // Your code goes here
-  }
+  static Future<void> onDidReceiveNotificationResponse(
+      NotificationResponse notificationResponse) async {
+    final String? payload = notificationResponse.payload;
+    if (payload != null && notificationResponse.actionId != null) {
+      final subjectId = payload;
+      final actionType = notificationResponse.actionId;
 
-  /// Use this method to detect if the user dismissed a notification
-  @pragma("vm:entry-point")
-  static Future<void> onDismissActionReceivedMethod(
-      ReceivedAction receivedAction) async {
-    // Your code goes here
-  }
+      final repo = AttendanceRepository();
+      await repo.init();
 
-  /// Use this method to detect when the user taps on a notification or action button
-  @pragma("vm:entry-point")
-  static Future<void> onActionReceivedMethod(
-      ReceivedAction receivedAction) async {
-    if (receivedAction.channelKey == 'attendance_channel') {
-      final String? subjectId = receivedAction.payload?['subjectId'];
-      final String? actionType = receivedAction.buttonKeyPressed;
-
-      if (subjectId != null) {
-        final repo = AttendanceRepository();
-        await repo.init(); // Ensure Hive is ready
-
-        if (actionType == 'PRESENT') {
-          await repo.markPresent(subjectId);
-        } else if (actionType == 'ABSENT') {
-          await repo.markAbsent(subjectId);
-        }
+      if (actionType == 'PRESENT') {
+        await repo.markPresent(subjectId);
+      } else if (actionType == 'ABSENT') {
+        await repo.markAbsent(subjectId);
       }
     }
   }
 
   static Future<void> scheduleClassNotification(
       ClassSession session, String subjectId) async {
-    // Calculate next occurrence
-    // final now = DateTime.now();
-    // DateTime scheduleDay = DateTime(now.year, now.month, now.day,
-    //     session.startTimeHour, session.startTimeMinute);
+    // Calculate the next occurrence
+    final now = tz.TZDateTime.now(tz.local);
 
-    // If it's earlier today or a different day, we need to adjust to the next occurrence
-    // But since `awesome_notifications` handles weekly schedules, we can just use the day of week.
+    // session.dayOfWeek: 1 (Mon) - 7 (Sun)
+    // now.weekday: 1 (Mon) - 7 (Sun)
 
-    await AwesomeNotifications().createNotification(
-      content: NotificationContent(
-        id: session.id.hashCode,
-        channelKey: 'attendance_channel',
-        title: 'Upcoming Class: ${session.subjectName}',
-        body: 'Time to mark your attendance!',
-        payload: {'subjectId': subjectId},
-        notificationLayout: NotificationLayout.Default,
-        category: NotificationCategory.Reminder,
+    tz.TZDateTime scheduledDate = tz.TZDateTime(
+      tz.local,
+      now.year,
+      now.month,
+      now.day,
+      session.startTimeHour,
+      session.startTimeMinute,
+    );
+
+    // Adjust to the specific day of the week
+    while (scheduledDate.weekday != session.dayOfWeek) {
+      scheduledDate = scheduledDate.add(const Duration(days: 1));
+    }
+
+    // If the scheduled time is in the past, move to next week
+    if (scheduledDate.isBefore(now)) {
+      scheduledDate = scheduledDate.add(const Duration(days: 7));
+    }
+
+    await flutterLocalNotificationsPlugin.zonedSchedule(
+      session.id.hashCode,
+      'Upcoming Class: ${session.subjectName}',
+      'Time to mark your attendance!',
+      scheduledDate,
+      const NotificationDetails(
+        android: AndroidNotificationDetails(
+            'attendance_channel', 'Attendance Notifications',
+            channelDescription: 'Notifications for upcoming classes',
+            importance: Importance.max,
+            priority: Priority.high,
+            actions: [
+              AndroidNotificationAction('PRESENT', 'Present',
+                  titleColor: Colors.green),
+              AndroidNotificationAction('ABSENT', 'Absent',
+                  titleColor: Colors.red),
+            ]),
       ),
-      actionButtons: [
-        NotificationActionButton(
-          key: 'PRESENT',
-          label: 'Present',
-          color: Colors.green,
-        ),
-        NotificationActionButton(
-          key: 'ABSENT',
-          label: 'Absent',
-          color: Colors.red,
-        ),
-      ],
-      schedule: NotificationCalendar(
-        weekday: session.dayOfWeek,
-        hour: session.startTimeHour,
-        minute: session.startTimeMinute,
-        second: 0,
-        millisecond: 0,
-        repeats: true,
-        allowWhileIdle: true,
-      ),
+      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+      uiLocalNotificationDateInterpretation:
+          UILocalNotificationDateInterpretation.absoluteTime,
+      matchDateTimeComponents: DateTimeComponents.dayOfWeekAndTime,
+      payload: subjectId,
     );
   }
 
   static Future<void> cancelSessionNotification(String sessionId) async {
-    await AwesomeNotifications().cancel(sessionId.hashCode);
+    await flutterLocalNotificationsPlugin.cancel(sessionId.hashCode);
   }
 }

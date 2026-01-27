@@ -12,7 +12,8 @@ dependencies:
   
   # Core
   cupertino_icons: ^1.0.6
-  awesome_notifications: ^0.10.0
+  flutter_local_notifications: ^17.2.2
+  timezone: ^0.9.4
   
   # State Management
   flutter_riverpod: ^2.4.9
@@ -52,6 +53,7 @@ dependencies:
   
   # Secure Storage for API keys
   flutter_secure_storage: ^9.0.0
+  flutter_timezone: ^5.0.1
 
 dev_dependencies:
   flutter_test:
