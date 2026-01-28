@@ -41,7 +41,7 @@ class _AIChatScreenState extends ConsumerState<AIChatScreen> {
 
     try {
       final aiService = ref.read(aiServiceProvider);
-      // final isLocalMode = ref.read(aiModeProvider); // Removed: Always local
+      final isLocalMode = ref.read(aiModeProvider);
 
       // Heuristic: Check if it looks like a task creation or planning request
       final lowerText = text.toLowerCase();
@@ -116,7 +116,8 @@ class _AIChatScreenState extends ConsumerState<AIChatScreen> {
             tasks: tasks,
             notes: notes,
             sessions: todaySessions,
-            isProMode: isProMode);
+            isProMode: isProMode,
+            isLocalMode: isLocalMode);
         final StringBuffer buffer = StringBuffer();
 
         await for (final chunk in stream) {

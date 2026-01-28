@@ -13,6 +13,7 @@ class MotivationCard extends ConsumerStatefulWidget {
 
 class _MotivationCardState extends ConsumerState<MotivationCard> {
   String _quote = "Loading motivation...";
+  String _author = "";
 
   @override
   void initState() {
@@ -22,10 +23,11 @@ class _MotivationCardState extends ConsumerState<MotivationCard> {
 
   Future<void> _loadQuote() async {
     final service = ref.read(motivationServiceProvider);
-    final quote = await service.getDailyQuote();
+    final data = await service.getDailyQuote();
     if (mounted) {
       setState(() {
-        _quote = quote;
+        _quote = data['quote'] ?? "Keep going!";
+        _author = data['author'] ?? "";
       });
     }
   }
@@ -40,11 +42,11 @@ class _MotivationCardState extends ConsumerState<MotivationCard> {
         color: theme.cardColor,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: theme.dividerColor.withValues(alpha: 0.1),
+          color: theme.dividerColor.withOpacity(0.1),
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
+            color: Colors.black.withOpacity(0.05),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -84,6 +86,20 @@ class _MotivationCardState extends ConsumerState<MotivationCard> {
               color: theme.textTheme.bodyLarge?.color,
             ),
           ),
+          if (_author.isNotEmpty && _author != "Unknown") ...[
+            const SizedBox(height: 12),
+            Align(
+              alignment: Alignment.centerRight,
+              child: Text(
+                "- $_author",
+                style: GoogleFonts.inter(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: theme.colorScheme.primary.withOpacity(0.8),
+                ),
+              ),
+            ),
+          ],
         ],
       ),
     );

@@ -26,14 +26,17 @@ class MotivationService {
     "Dream big and dare to fail. - Norman Vaughan",
   ];
 
-  Future<String> getDailyQuote() async {
+  Future<Map<String, String>> getDailyQuote() async {
     final box = await Hive.openBox(_boxName);
     final lastDateStr = box.get('last_date');
     final todayStr = DateTime.now().toIso8601String().split('T')[0];
 
     // Note: To test "Daily" change, you can comment out this check
     if (lastDateStr == todayStr) {
-      return box.get('current_quote', defaultValue: _localQuotes.first);
+      return {
+        'quote': box.get('current_quote', defaultValue: _localQuotes.first),
+        'author': box.get('current_author', defaultValue: 'Unknown'),
+      };
     }
 
     // Try fetching from backend
@@ -45,11 +48,13 @@ class MotivationService {
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         final backendQuote = data['quote'];
+        final backendAuthor = data['author'] ?? 'Unknown';
 
         // Save new daily quote
         await box.put('last_date', todayStr);
         await box.put('current_quote', backendQuote);
-        return backendQuote;
+        await box.put('current_author', backendAuthor);
+        return {'quote': backendQuote, 'author': backendAuthor};
       }
     } catch (e) {
       // Backend failed, fall back to local
@@ -58,9 +63,14 @@ class MotivationService {
 
     // Fallback Local Logic
     final random = Random();
-    final newQuote = _localQuotes[random.nextInt(_localQuotes.length)];
+    final newQuoteRaw = _localQuotes[random.nextInt(_localQuotes.length)];
+    final parts = newQuoteRaw.split(' - ');
+    final newQuote = parts[0];
+    final newAuthor = parts.length > 1 ? parts[1] : 'Unknown';
+
     await box.put('last_date', todayStr);
     await box.put('current_quote', newQuote);
-    return newQuote;
+    await box.put('current_author', newAuthor);
+    return {'quote': newQuote, 'author': newAuthor};
   }
 }

@@ -2,7 +2,8 @@ fastapi
 uvicorn
 langchain
 langchain-community
-langchain-ollama
+langchain-google-genai
+google-generativeai
 langchain-chroma
 chromadb
 pydantic

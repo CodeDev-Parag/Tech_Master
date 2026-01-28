@@ -4,7 +4,6 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:iconsax/iconsax.dart';
 import '../../../data/models/timetable.dart';
-import '../../../data/repositories/timetable_repository.dart';
 import '../../providers/providers.dart';
 
 // Provider for fetching sessions

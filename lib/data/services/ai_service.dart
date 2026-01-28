@@ -6,6 +6,9 @@ import 'dart:async';
 import '../models/note.dart';
 import '../repositories/task_repository.dart';
 import '../repositories/settings_repository.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+import '../../core/constants/app_constants.dart';
 
 class ParsedTask {
   final String title;
@@ -65,10 +68,38 @@ class AIService extends ChangeNotifier {
   }
 
   Future<void> syncData(List<Task> tasks, List<Note> notes) async {
-    // In local-only mode, we just ensure the local ML model is trained.
-    // We do not send data to any backend.
+    // 1. Train local ML model
     await trainModel(tasks);
     print('DEBUG: Local AI model updated with ${tasks.length} tasks.');
+
+    // 2. Sync to Cloud Backend (Gemini)
+    try {
+      final response = await http.post(
+        Uri.parse('${AppConstants.backendBaseUrl}/train'),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({
+          'tasks': tasks
+              .map((t) => {
+                    'title': t.title,
+                    'description': t.description ?? '',
+                    'status': t.status.name,
+                    'priority': t.priority.name,
+                    'date': t.dueDate?.toIso8601String() ?? '',
+                  })
+              .toList(),
+          'notes': notes.map((n) => n.content).toList(),
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        print('DEBUG: Successfully synced data to Cloud AI.');
+      } else {
+        print(
+            'DEBUG: Cloud AI sync failed with status: ${response.statusCode}');
+      }
+    } catch (e) {
+      print('DEBUG: Error syncing to Cloud AI: $e');
+    }
   }
 
   Future<void> trainModel(List<Task> tasks) async {
@@ -132,8 +163,9 @@ class AIService extends ChangeNotifier {
 
       int currentHour = now.hour;
       if (currentHour < 8) currentHour = 8; // Start day at 8 AM if early
-      if (currentHour > 20)
+      if (currentHour > 20) {
         return "The day is almost over! Take some rest and plan for tomorrow.";
+      }
 
       // Sort items by time
       // This is a simplified "Pro" algorithm
@@ -327,8 +359,9 @@ class AIService extends ChangeNotifier {
       bool isProMode = false}) async {
     // Add User Message to History
     _conversationHistory.add("User: $message");
-    if (_conversationHistory.length > 10)
+    if (_conversationHistory.length > 10) {
       _conversationHistory.removeAt(0); // Keep last 10 turns
+    }
 
     // Check for "Reply Itself" / Follow-up triggers
     final lower = message.toLowerCase();
@@ -357,21 +390,69 @@ class AIService extends ChangeNotifier {
     return response;
   }
 
-  /// Streaming chat response - Simulates typing for local feel
+  /// Streaming chat response - Handles both Local and Cloud (Gemini)
   Stream<String> chatStream(String message,
       {List<Task> tasks = const [],
       List<Note> notes = const [],
       List<dynamic> sessions = const [],
-      bool isProMode = false}) async* {
-    // Calculate response synchronously first
-    final fullResponse = await chatWithContext(message,
-        tasks: tasks, notes: notes, sessions: sessions, isProMode: isProMode);
+      bool isProMode = false,
+      bool isLocalMode = true}) async* {
+    if (isLocalMode) {
+      // Calculate response synchronously first
+      final fullResponse = await chatWithContext(message,
+          tasks: tasks, notes: notes, sessions: sessions, isProMode: isProMode);
 
-    // Stream it
-    final words = fullResponse.split(' ');
-    for (var i = 0; i < words.length; i++) {
-      await Future.delayed(const Duration(milliseconds: 30));
-      yield "${words[i]} ";
+      // Stream it
+      final words = fullResponse.split(' ');
+      for (var i = 0; i < words.length; i++) {
+        await Future.delayed(const Duration(milliseconds: 30));
+        yield "${words[i]} ";
+      }
+    } else {
+      // CLOUD Path
+      yield* chatStreamCloud(message);
+    }
+  }
+
+  /// Cloud Chat Stream (Gemini Backend)
+  Stream<String> chatStreamCloud(String message) async* {
+    try {
+      final client = http.Client();
+      final request = http.Request(
+        'POST',
+        Uri.parse('${AppConstants.backendBaseUrl}/chat'),
+      );
+      request.headers['Content-Type'] = 'application/json';
+      request.body = json.encode({
+        'message': message,
+        'context_window': 10,
+      });
+
+      final response =
+          await client.send(request).timeout(const Duration(seconds: 15));
+
+      if (response.statusCode == 200) {
+        await for (var line in response.stream
+            .transform(utf8.decoder)
+            .transform(const LineSplitter())) {
+          if (line.trim().isEmpty) continue;
+          try {
+            final data = json.decode(line);
+            if (data.containsKey('token')) {
+              yield data['token'];
+            }
+          } catch (e) {
+            print('DEBUG: Error parsing chat stream line: $e');
+          }
+        }
+      } else if (response.statusCode == 503) {
+        yield "AI is waking up on Render. Please try again in 30 seconds...";
+      } else {
+        yield "Cloud AI is currently unavailable (Status: ${response.statusCode}). Using local fallback...";
+      }
+    } catch (e) {
+      print('DEBUG: Cloud Chat Error: $e');
+      yield "Error connecting to Cloud AI. Please check your internet connection.";
     }
   }
 

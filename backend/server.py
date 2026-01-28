@@ -15,7 +15,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import List, Optional
 
-from langchain_ollama import OllamaLLM, OllamaEmbeddings
+from langchain_google_genai import ChatGoogleGenerativeAI, GoogleGenerativeAIEmbeddings
 from langchain_chroma import Chroma
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.runnables import RunnablePassthrough
@@ -24,8 +24,12 @@ from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.docstore.document import Document
 
 # --- Configuration ---
-MODEL_NAME = os.getenv("AI_MODEL", "phi3:mini") 
-EMBED_MODEL = os.getenv("AI_EMBED_MODEL", "nomic-embed-text")
+MODEL_NAME = os.getenv("AI_MODEL", "gemini-2.0-flash") 
+EMBED_MODEL = os.getenv("AI_EMBED_MODEL", "text-embedding-004")
+GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
+
+if not GOOGLE_API_KEY:
+    print("WARNING: GOOGLE_API_KEY not found in environment variables.")
 
 app = FastAPI(title="Task Master AI Backend")
 
@@ -59,15 +63,19 @@ _vector_store = None
 def get_llm():
     global _llm
     if _llm is None:
+        if not GOOGLE_API_KEY:
+            raise HTTPException(status_code=500, detail="GOOGLE_API_KEY not configured")
         print(f"DEBUG: Initializing LLM {MODEL_NAME}")
-        _llm = OllamaLLM(model=MODEL_NAME)
+        _llm = ChatGoogleGenerativeAI(model=MODEL_NAME, google_api_key=GOOGLE_API_KEY)
     return _llm
 
 def get_embeddings():
     global _embeddings
     if _embeddings is None:
+        if not GOOGLE_API_KEY:
+            raise HTTPException(status_code=500, detail="GOOGLE_API_KEY not configured")
         print(f"DEBUG: Initializing Embeddings {EMBED_MODEL}")
-        _embeddings = OllamaEmbeddings(model=EMBED_MODEL)
+        _embeddings = GoogleGenerativeAIEmbeddings(model=EMBED_MODEL, google_api_key=GOOGLE_API_KEY)
     return _embeddings
 
 def get_vector_store():
@@ -129,23 +137,42 @@ async def health_check():
     return {"status": "alive", "model": MODEL_NAME}
 
 import random
+from datetime import datetime
+import json
+
+# Pre-load quotes for efficiency
+QUOTES_FILE = os.path.join(os.path.dirname(__file__), "quotes.json")
+_cached_quotes = []
+
+def get_quotes():
+    global _cached_quotes
+    if not _cached_quotes:
+        try:
+            with open(QUOTES_FILE, 'r', encoding='utf-8') as f:
+                _cached_quotes = json.load(f)
+            print(f"DEBUG: Loaded {len(_cached_quotes)} quotes from {QUOTES_FILE}")
+        except Exception as e:
+            print(f"ERROR loading quotes: {e}")
+            # Fallback
+            _cached_quotes = [{"quoteText": "The best way to predict the future is to create it.", "quoteAuthor": "Peter Drucker"}]
+    return _cached_quotes
 
 @app.get("/quote")
 async def get_daily_quote():
-    """Returns a random motivational quote."""
-    quotes = [
-        "The best way to predict the future is to create it. - Peter Drucker",
-        "Your time is limited, so don't waste it living someone else's life. - Steve Jobs",
-        "The only limit to our realization of tomorrow will be our doubts of today. - Franklin D. Roosevelt",
-        "Do not wait to strike till the iron is hot; but make it hot by striking. - William Butler Yeats",
-        "It is never too late to be what you might have been. - George Eliot",
-        "Everything you've ever wanted is on the other side of fear. - George Addair",
-        "Opportunities don't happen. You create them. - Chris Grosser",
-        "Success is walking from failure to failure with no loss of enthusiasm. - Winston Churchill",
-        "I find that the harder I work, the more luck I seem to have. - Thomas Jefferson",
-        "Don't be afraid to give up the good to go for the great. - John D. Rockefeller"
-    ]
-    return {"quote": random.choice(quotes)}
+    """Returns a quote that changes daily at 12 AM."""
+    quotes = get_quotes()
+    
+    # Selection logic: Use day of the year to ensure it changes every 24h
+    # and stays the same for all users on the same day.
+    day_of_year = datetime.now().timetuple().tm_yday
+    # Use modulo if dataset is smaller than 365 or just to wrap around
+    quote_index = day_of_year % len(quotes)
+    
+    selected = quotes[quote_index]
+    return {
+        "quote": selected.get("quoteText", "Keep going!"), 
+        "author": selected.get("quoteAuthor", "Unknown")
+    }
 
 @app.post("/train")
 async def train_knowledge_base(data: TrainRequest):
@@ -184,6 +211,7 @@ async def train_knowledge_base(data: TrainRequest):
             
         return {"status": "success", "indexed_items": len(documents)}
     except Exception as e:
+        print(f"ERROR in /train: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
 from fastapi.responses import StreamingResponse
@@ -209,19 +237,12 @@ async def chat_endpoint(request: ChatRequest):
         # 3. Stream Generator
         async def response_generator():
             async for chunk in rag_chain.astream(request.message):
-                # Wrap text chunks in JSON or just raw text?
-                # Raw text is simplest for client stream processing.
-                # But let's send JSON lines for structure if needed.
-                # Actually, sending raw text is fine for a chat stream if MIME type is text/event-stream or plain.
-                # Let's use simple JSON lines to be safe against newlines.
                 yield json.dumps({"token": chunk}) + "\n"
 
         return StreamingResponse(response_generator(), media_type="application/x-ndjson")
 
     except Exception as e:
-        error_str = str(e).lower()
-        if "not found" in error_str or "404" in error_str:
-            raise HTTPException(status_code=503, detail="AI model is still loading. Please wait 1-2 minutes.")
+        print(f"ERROR in /chat: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
 if __name__ == "__main__":

@@ -1,5 +1,5 @@
 @echo off
-echo Starting Task Master Data Collection Server...
+echo Starting Task Master AI Backend (Python/Gemini)...
 cd /d "%~dp0"
-dart run server.dart
+python server.py
 pause
