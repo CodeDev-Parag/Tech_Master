@@ -8,7 +8,7 @@ class SubjectAttendance extends HiveObject {
   final String id;
 
   @HiveField(1)
-  final String subjectName;
+  String subjectName;
 
   @HiveField(2)
   int attendedClasses;

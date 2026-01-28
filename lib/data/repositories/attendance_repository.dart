@@ -95,20 +95,22 @@ class AttendanceRepository {
     }
   }
 
-  Future<void> updateSubject(String id, {String? name, double? target}) async {
+  Future<void> updateSubject(String id,
+      {String? name, double? target, int? attended, int? total}) async {
     final subject = _box.values.firstWhere((s) => s.id == id);
     if (name != null) {
-      // hacky way to update read-only field if any, but Hive objects are mutable usually
-      // Since fields are final in my model, I might need to make them mutable or recreate
-      // In the model I made them mutable (except id/name). Wait, name is final.
-      // Let's check the model I wrote.
-      // id, subjectName are final.
-      // I should probably make subjectName mutable or recreate the object.
-      // For now, I will not support renaming or I'll recreate it.
+      subject.subjectName = name.trim();
     }
     if (target != null) {
       subject.targetPercentage = target;
-      subject.save();
     }
+    if (attended != null) {
+      subject.attendedClasses = attended;
+    }
+    if (total != null) {
+      subject.totalClasses = total;
+    }
+    subject.lastUpdated = DateTime.now();
+    await subject.save();
   }
 }

@@ -105,12 +105,103 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
                 subject: subject,
                 repo: repo,
                 onUpdate: _refresh,
+                onEdit: (s) => _showEditSubjectDialog(context, s, repo),
               );
             },
           );
         },
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (err, stack) => Center(child: Text('Error: $err')),
+      ),
+    );
+  }
+
+  void _showEditSubjectDialog(BuildContext context, SubjectAttendance subject,
+      AttendanceRepository repo) {
+    final nameController = TextEditingController(text: subject.subjectName);
+    final targetController = TextEditingController(
+        text: subject.targetPercentage.toStringAsFixed(0));
+    final attendedController =
+        TextEditingController(text: subject.attendedClasses.toString());
+    final totalController =
+        TextEditingController(text: subject.totalClasses.toString());
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Edit Subject'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: nameController,
+                decoration: const InputDecoration(
+                  labelText: 'Subject Name',
+                  prefixIcon: Icon(Iconsax.book),
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: targetController,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(
+                  labelText: 'Target %',
+                  prefixIcon: Icon(Iconsax.verify),
+                ),
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: attendedController,
+                      keyboardType: TextInputType.number,
+                      decoration: const InputDecoration(
+                        labelText: 'Attended',
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: TextField(
+                      controller: totalController,
+                      keyboardType: TextInputType.number,
+                      decoration: const InputDecoration(
+                        labelText: 'Total',
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () async {
+              final sanitizedName = nameController.text.trim();
+              if (sanitizedName.isNotEmpty) {
+                await repo.updateSubject(
+                  subject.id,
+                  name: sanitizedName,
+                  target: double.tryParse(targetController.text),
+                  attended: int.tryParse(attendedController.text),
+                  total: int.tryParse(totalController.text),
+                );
+                _refresh();
+                if (context.mounted) Navigator.pop(context);
+              }
+            },
+            child: const Text('Save'),
+          ),
+        ],
       ),
     );
   }
@@ -205,11 +296,13 @@ class _AttendanceCard extends StatelessWidget {
   final SubjectAttendance subject;
   final AttendanceRepository repo;
   final VoidCallback onUpdate;
+  final Function(SubjectAttendance) onEdit;
 
   const _AttendanceCard({
     required this.subject,
     required this.repo,
     required this.onUpdate,
+    required this.onEdit,
   });
 
   @override
@@ -276,6 +369,15 @@ class _AttendanceCard extends StatelessWidget {
                       ),
                     ),
                   ),
+                  IconButton(
+                    onPressed: () => onEdit(subject),
+                    icon: const Icon(Iconsax.edit, size: 18),
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                    color: theme.colorScheme.primary.withOpacity(0.7),
+                    tooltip: 'Edit Subject',
+                  ),
+                  const SizedBox(width: 8),
                   Container(
                     padding:
                         const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
