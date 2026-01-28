@@ -45,13 +45,21 @@ class _AIChatScreenState extends ConsumerState<AIChatScreen> {
 
       // Heuristic: Check if it looks like a task creation or planning request
       final lowerText = text.toLowerCase();
-      final isTaskRelated = lowerText.startsWith('add') ||
-          lowerText.startsWith('create') ||
-          lowerText.contains('remind me') ||
-          lowerText.contains('plan') ||
-          lowerText.contains('want to') ||
-          lowerText.contains('going to') ||
-          lowerText.contains('need to');
+
+      // Explicitly exclude Pro Mode commands (let them pass to Chat Stream)
+      final isProCommand = (lowerText.contains('plan') &&
+              (lowerText.contains('day') || lowerText.contains('schedule'))) ||
+          (lowerText.contains('productivity') &&
+              lowerText.contains('increase'));
+
+      final isTaskRelated = !isProCommand &&
+          (lowerText.startsWith('add') ||
+              lowerText.startsWith('create') ||
+              lowerText.contains('remind me') ||
+              lowerText.contains('plan') ||
+              lowerText.contains('want to') ||
+              lowerText.contains('going to') ||
+              lowerText.contains('need to'));
 
       if (isTaskRelated) {
         // NON-STREAMING Path for complex task parsing (needs full context)

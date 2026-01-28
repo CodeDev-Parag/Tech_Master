@@ -275,6 +275,21 @@ class ProModeNotifier extends StateNotifier<bool> {
   }
 }
 
+final collegeModeProvider =
+    StateNotifierProvider<CollegeModeNotifier, bool>((ref) {
+  return CollegeModeNotifier(ref.watch(settingsRepositoryProvider));
+});
+
+class CollegeModeNotifier extends StateNotifier<bool> {
+  final SettingsRepository _repo;
+  CollegeModeNotifier(this._repo) : super(_repo.isCollegeMode);
+
+  void toggle(bool enabled) {
+    state = enabled;
+    _repo.setCollegeMode(enabled);
+  }
+}
+
 final customServerModeProvider =
     StateNotifierProvider<CustomServerModeNotifier, bool>((ref) {
   return CustomServerModeNotifier(ref.watch(settingsRepositoryProvider));

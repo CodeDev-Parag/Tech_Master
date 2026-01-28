@@ -137,7 +137,7 @@ class AIService extends ChangeNotifier {
         final hourEnd = i + 1;
 
         // Check if busy with class
-        final busyClass = sessions.firstWhere((s) {
+        final busyClass = sessions.cast<dynamic>().firstWhere((s) {
           // Assuming s has startTimeHour property (dynamic check)
           return s.startTimeHour <= i && s.endTimeHour > i;
         }, orElse: () => null);
@@ -269,6 +269,47 @@ class AIService extends ChangeNotifier {
     return _nlpService.getResponse(intentKey);
   }
 
+  // Conversation History Buffer for Context Awareness
+  final List<String> _conversationHistory = [];
+
+  // Enhanced Chat with Context
+  Future<String> chatWithContext(String message,
+      {List<Task> tasks = const [],
+      List<Note> notes = const [],
+      List<dynamic> sessions = const [],
+      bool isProMode = false}) async {
+    // Add User Message to History
+    _conversationHistory.add("User: $message");
+    if (_conversationHistory.length > 10)
+      _conversationHistory.removeAt(0); // Keep last 10 turns
+
+    // Check for "Reply Itself" / Follow-up triggers
+    final lower = message.toLowerCase();
+    if (lower.contains('tell me more') ||
+        lower.contains('continue') ||
+        lower.contains('explain')) {
+      // Ideally this would use an LLM, but for local logic we check the last system response
+      final lastResponse =
+          _conversationHistory.where((m) => m.startsWith("AI:")).lastOrNull;
+      if (lastResponse != null) {
+        if (lastResponse.contains('pending tasks')) {
+          // Elaborate on tasks
+          return "You have tasks like '${tasks.firstOrNull?.title}'. You should prioritize the urgent ones.";
+        }
+      }
+    }
+
+    // Get Base Response
+    final response = await chat(message,
+        tasks: tasks, notes: notes, sessions: sessions, isProMode: isProMode);
+
+    // Add AI Response to History
+    _conversationHistory.add("AI: $response");
+    if (_conversationHistory.length > 10) _conversationHistory.removeAt(0);
+
+    return response;
+  }
+
   String _truncate(String text, int length) {
     if (text.length <= length) return text;
     return "${text.substring(0, length)}...";
@@ -281,7 +322,7 @@ class AIService extends ChangeNotifier {
       List<dynamic> sessions = const [],
       bool isProMode = false}) async* {
     // Calculate response synchronously first
-    final fullResponse = await chat(message,
+    final fullResponse = await chatWithContext(message,
         tasks: tasks, notes: notes, sessions: sessions, isProMode: isProMode);
 
     // Stream it
@@ -389,15 +430,38 @@ class AIService extends ChangeNotifier {
     final total = tasks.length;
     final completionRate = total > 0 ? (completed / total) : 0.0;
 
+    // Time-based context
+    final hour = DateTime.now().hour;
+    String timeContext = '';
+    String timeAdvice = '';
+
+    if (hour < 12) {
+      timeContext = 'Good Morning!';
+      timeAdvice = 'Tackle your hardest task first (Eat the Frog).';
+    } else if (hour < 17) {
+      timeContext = 'Good Afternoon!';
+      timeAdvice = 'Maintain your momentum or take a short break.';
+    } else {
+      timeContext = 'Good Evening!';
+      timeAdvice = 'Wrap up for the day and plan for tomorrow.';
+    }
+
+    String summary = '';
+    if (completionRate > 0.7) {
+      summary = '$timeContext You are crushing it today!';
+    } else if (completionRate > 0.3) {
+      summary = '$timeContext Making steady progress.';
+    } else {
+      summary = '$timeContext Let\'s get some tasks done.';
+    }
+
     return ProductivityInsight(
-      summary: completionRate > 0.7
-          ? 'Excellent momentum!'
-          : 'Focus on closing open loops.',
-      tips: ['Break down large tasks', 'Avoid multitasking'],
+      summary: summary,
+      tips: [timeAdvice, 'Focus on one thing at a time'],
       productivityScore: completionRate * 100,
       recommendation: completionRate < 0.5
           ? 'Pick one small task to finish now.'
-          : 'Schedule deep work for tomorrow.',
+          : 'Review your upcoming schedule.',
     );
   }
 }

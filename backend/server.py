@@ -128,6 +128,25 @@ async def health_check():
     """Verify server is alive and reachable."""
     return {"status": "alive", "model": MODEL_NAME}
 
+import random
+
+@app.get("/quote")
+async def get_daily_quote():
+    """Returns a random motivational quote."""
+    quotes = [
+        "The best way to predict the future is to create it. - Peter Drucker",
+        "Your time is limited, so don't waste it living someone else's life. - Steve Jobs",
+        "The only limit to our realization of tomorrow will be our doubts of today. - Franklin D. Roosevelt",
+        "Do not wait to strike till the iron is hot; but make it hot by striking. - William Butler Yeats",
+        "It is never too late to be what you might have been. - George Eliot",
+        "Everything you've ever wanted is on the other side of fear. - George Addair",
+        "Opportunities don't happen. You create them. - Chris Grosser",
+        "Success is walking from failure to failure with no loss of enthusiasm. - Winston Churchill",
+        "I find that the harder I work, the more luck I seem to have. - Thomas Jefferson",
+        "Don't be afraid to give up the good to go for the great. - John D. Rockefeller"
+    ]
+    return {"quote": random.choice(quotes)}
+
 @app.post("/train")
 async def train_knowledge_base(data: TrainRequest):
     """

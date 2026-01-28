@@ -11,6 +11,7 @@ import '../../providers/providers.dart';
 import '../../widgets/task_card.dart';
 import '../../widgets/stats_card.dart';
 import '../../widgets/ai_insight_card.dart';
+import '../../widgets/motivation_card.dart';
 import '../task_list/task_list_screen.dart';
 import '../add_task/add_task_screen.dart';
 import '../focus/focus_screen.dart';
@@ -249,16 +250,34 @@ class _HomeTab extends ConsumerWidget {
 
           const SliverToBoxAdapter(child: SizedBox(height: 24)),
 
-          // Quick Actions
+          // Daily Motivation
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: Row(
+              child: const MotivationCard()
+                  .animate()
+                  .fadeIn(delay: 120.ms)
+                  .slideY(begin: 0.1),
+            ),
+          ),
+
+          const SliverToBoxAdapter(child: SizedBox(height: 24)),
+
+          // Quick Actions (Swipeable)
+          SliverToBoxAdapter(
+            child: SizedBox(
+              height: 220, // Increased from 180 to fix overflow
+              child: PageView(
+                controller: PageController(viewportFraction: 0.9),
+                padEnds: false, // Start from left
+                physics: const BouncingScrollPhysics(),
                 children: [
-                  Expanded(
+                  Padding(
+                    padding: const EdgeInsets.only(left: 20, right: 8),
                     child: _QuickActionCard(
                       title: 'My Notes',
-                      description: 'Write/Export',
+                      description:
+                          'Capture ideas, write journals, and export data.',
                       icon: Iconsax.note_1,
                       color: Colors.blueAccent,
                       onTap: () => Navigator.push(
@@ -268,25 +287,40 @@ class _HomeTab extends ConsumerWidget {
                       ),
                     ),
                   ),
-                  const SizedBox(width: 8),
-                  Expanded(
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
                     child: _QuickActionCard(
-                      title: 'Attendance',
-                      description: 'Track & Bunk',
+                      title: 'Attendance Tracker',
+                      description:
+                          'Monitor your classes, track bunks, and stay above 75%.',
                       icon: Iconsax.teacher,
                       color: Colors.purpleAccent,
-                      onTap: () => Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                            builder: (context) => const AttendanceScreen()),
-                      ),
+                      onTap: () {
+                        final isCollegeMode = ref.read(collegeModeProvider);
+                        if (!isCollegeMode) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text(
+                                  'Enable "College Mode" in Settings to unlock Attendance Tracker.'),
+                              duration: Duration(seconds: 2),
+                            ),
+                          );
+                          return;
+                        }
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                              builder: (context) => const AttendanceScreen()),
+                        );
+                      },
                     ),
                   ),
-                  const SizedBox(width: 8),
-                  Expanded(
+                  Padding(
+                    padding: const EdgeInsets.only(left: 8, right: 20),
                     child: _QuickActionCard(
                       title: 'No Procrastination',
-                      description: 'Beat Procrastination',
+                      description:
+                          'Beat distractions with focused Pomodoro sessions.',
                       icon: Iconsax.flash,
                       color: Colors.orangeAccent,
                       onTap: () => Navigator.push(
@@ -553,53 +587,66 @@ class _QuickActionCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    return Tooltip(
-      message: '$title: $description',
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(20),
-        child: Container(
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(24),
+      child: Container(
+        padding: const EdgeInsets.all(24), // More padding for "full" look
+        decoration: BoxDecoration(
+            // Use a gradient or solid color based on preference.
+            // Solid surface with accent borders/icons is cleaner.
             color: theme.cardColor,
-            borderRadius: BorderRadius.circular(20),
+            borderRadius: BorderRadius.circular(24),
             border:
                 Border.all(color: theme.dividerColor.withValues(alpha: 0.1)),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: color.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(10),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.05),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              )
+            ]),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: color.withValues(alpha: 0.15),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(icon, color: color, size: 32),
                 ),
-                child: Icon(icon, color: color, size: 24),
+                Icon(Iconsax.arrow_right_3,
+                    color: theme.disabledColor, size: 20),
+              ],
+            ),
+            const Spacer(),
+            Text(
+              title,
+              maxLines: 1,
+              overflow: TextOverflow.visible,
+              style: GoogleFonts.inter(
+                fontWeight: FontWeight.w700,
+                fontSize: 20, // Larger title
               ),
-              const SizedBox(height: 12),
-              Text(
-                title,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: GoogleFonts.inter(
-                  fontWeight: FontWeight.bold,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              description,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: GoogleFonts.inter(
                   fontSize: 14,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                description,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: GoogleFonts.inter(
-                  fontSize: 11,
                   color:
-                      theme.textTheme.bodySmall?.color?.withValues(alpha: 0.6),
-                ),
-              ),
-            ],
-          ),
+                      theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.7),
+                  height: 1.4),
+            ),
+          ],
         ),
       ),
     );

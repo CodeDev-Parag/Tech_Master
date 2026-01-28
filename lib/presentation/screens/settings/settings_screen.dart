@@ -65,6 +65,27 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     },
                   ),
                 ),
+                Divider(color: theme.dividerColor, height: 1),
+                _settingsTile(
+                  theme,
+                  icon: Iconsax.teacher,
+                  iconColor: Colors.teal,
+                  title: 'College Mode',
+                  subtitle: 'Unlock Attendance Tracker',
+                  trailing: Switch(
+                    value: ref.watch(collegeModeProvider),
+                    onChanged: (value) {
+                      ref.read(collegeModeProvider.notifier).toggle(value);
+                      if (value) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                              content: Text(
+                                  'College Mode Enabled! Attendance Tracker unlocked.')),
+                        );
+                      }
+                    },
+                  ),
+                ),
               ],
             ).animate().fadeIn(delay: 50.ms).slideY(begin: 0.1),
             const SizedBox(height: 24),
@@ -214,7 +235,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               const Icon(Iconsax.magic_star, color: Colors.white, size: 24),
               const SizedBox(width: 12),
               Text(
-                "What's New in 1.1.8",
+                "What's New in 2.1.1",
                 style: GoogleFonts.inter(
                   color: Colors.white,
                   fontSize: 18,
@@ -224,12 +245,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             ],
           ),
           const SizedBox(height: 12),
-          _whatsNewItem(Iconsax.cpu, "100% Local AI",
-              "No internet needed. Zero latency."),
-          _whatsNewItem(Iconsax.shield_tick, "Privacy First",
-              "Your data never leaves this device."),
-          _whatsNewItem(Iconsax.flash, "Adaptive Engine",
-              "Learns from your productivity patterns."),
+          _whatsNewItem(Iconsax.teacher, "College Mode",
+              "Unlock Attendance Tracker with this mode."),
+          _whatsNewItem(Iconsax.quote_up, "Daily Motivation",
+              "Get inspired with a new quote every day."),
+          _whatsNewItem(Iconsax.cpu, "Smarter Insights",
+              "Context-aware productivity analysis."),
         ],
       ),
     ).animate().scale(delay: 50.ms).fadeIn();

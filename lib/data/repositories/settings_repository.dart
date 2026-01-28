@@ -49,4 +49,11 @@ class SettingsRepository {
   Future<void> setProMode(bool enabled) async {
     await _box.put(keyProMode, enabled);
   }
+
+  // College Mode
+  static const String keyCollegeMode = 'college_mode';
+  bool get isCollegeMode => _box.get(keyCollegeMode, defaultValue: false);
+  Future<void> setCollegeMode(bool enabled) async {
+    await _box.put(keyCollegeMode, enabled);
+  }
 }
