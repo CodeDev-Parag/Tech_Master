@@ -139,6 +139,30 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     },
                   ),
                 ),
+                const Divider(height: 1),
+                _settingsTile(
+                  theme,
+                  icon: Iconsax.flash_1,
+                  iconColor: Colors.orange,
+                  title: 'Cloud AI (Fast Mode)',
+                  subtitle: ref.watch(aiModeProvider)
+                      ? 'Local (Private)'
+                      : 'Gemini (Powerful)',
+                  trailing: Switch(
+                    value: !ref.watch(
+                        aiModeProvider), // value is true if NOT local (i.e. Cloud)
+                    onChanged: (isCloud) {
+                      ref.read(aiModeProvider.notifier).toggle(!isCloud);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(isCloud
+                              ? 'Fast AI (Gemini) enabled! Higher reasoning & speed.'
+                              : 'Local AI enabled! Offline & 100% private.'),
+                        ),
+                      );
+                    },
+                  ),
+                ),
               ],
             ).animate().fadeIn(delay: 200.ms).slideY(begin: 0.1),
 
