@@ -4,6 +4,8 @@ import 'local_ml_service.dart';
 import 'local_nlp_service.dart';
 import 'dart:async';
 import '../models/note.dart';
+import '../repositories/task_repository.dart';
+import '../repositories/settings_repository.dart';
 
 class ParsedTask {
   final String title;
@@ -40,8 +42,11 @@ class ProductivityInsight {
 class AIService extends ChangeNotifier {
   final LocalMLService _mlService;
   final LocalNlpService _nlpService;
+  final SettingsRepository _settingsRepository;
+  final TaskRepository _taskRepository;
 
-  AIService(this._mlService, this._nlpService, _);
+  AIService(this._mlService, this._nlpService, this._settingsRepository,
+      this._taskRepository);
 
   // Always true now as we are running locally
   bool get isConfigured => true;
@@ -252,19 +257,61 @@ class AIService extends ChangeNotifier {
             .take(3)
             .toList();
 
-        if (matches.isNotEmpty) {
-          final list = matches
-              .map((n) => "• **${n.title}**: ${_truncate(n.content, 50)}")
-              .join('\n');
-          return "I found these notes related to your query:\n$list";
+        if (matches.isEmpty) {
+          return "I couldn't find any notes matching '$lower'.";
         }
+        final list = matches.map((n) => "• ${n.title}").join('\n');
+        return "Found these notes:\n$list";
       }
 
       // Default notes summary
       return "You have ${notes.length} notes. Ask me about a specific topic!";
     }
 
-    // 5. Fallback to NLP Intent Prediction
+    // 5. Explicit Commands (Mark as Complete)
+    if (lower.contains('mark') &&
+        (lower.contains('complete') || lower.contains('done'))) {
+      // Extract task name: "mark [buy milk] as complete"
+      String taskName = lower
+          .replaceAll('mark', '')
+          .replaceAll('this task', '')
+          .replaceAll('task', '')
+          .replaceAll('as', '')
+          .replaceAll('complete', '')
+          .replaceAll('done', '')
+          .trim();
+
+      if (taskName.isNotEmpty) {
+        // Find task
+        try {
+          // Flexible matching
+          final taskToUpdate = tasks.firstWhere(
+            (t) =>
+                t.title.toLowerCase().contains(taskName) &&
+                t.status != TaskStatus.completed,
+          );
+
+          await _taskRepository.toggleTaskStatus(taskToUpdate.id);
+          return "✅ Task marked as complete: ${taskToUpdate.title}";
+        } catch (e) {
+          try {
+            // If fuzzy match failed, try matching ANY task containing the name (even completed ones, to be smart)
+            final taskToUpdate = tasks.firstWhere(
+              (t) => t.title.toLowerCase().contains(taskName),
+            );
+            if (taskToUpdate.status == TaskStatus.completed) {
+              return "Task '${taskToUpdate.title}' is already completed!";
+            }
+          } catch (_) {}
+
+          return "I couldn't find a pending task matching \"$taskName\". Please check the exact name.";
+        }
+      } else {
+        return "Which task would you like to mark as complete?";
+      }
+    }
+
+    // 6. Fallback to NLP Intent Prediction
     final intentKey = _nlpService.predictIntent(message);
     return _nlpService.getResponse(intentKey);
   }
@@ -308,11 +355,6 @@ class AIService extends ChangeNotifier {
     if (_conversationHistory.length > 10) _conversationHistory.removeAt(0);
 
     return response;
-  }
-
-  String _truncate(String text, int length) {
-    if (text.length <= length) return text;
-    return "${text.substring(0, length)}...";
   }
 
   /// Streaming chat response - Simulates typing for local feel

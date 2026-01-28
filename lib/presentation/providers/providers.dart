@@ -66,7 +66,8 @@ final aiServiceProvider = ChangeNotifierProvider<AIService>((ref) {
   final mlService = ref.watch(localMLServiceProvider);
   final nlpService = ref.watch(localNlpServiceProvider);
   final settingsRepo = ref.watch(settingsRepositoryProvider);
-  final service = AIService(mlService, nlpService, settingsRepo);
+  final taskRepo = ref.watch(taskRepositoryProvider);
+  final service = AIService(mlService, nlpService, settingsRepo, taskRepo);
   service.init();
   return service;
 });

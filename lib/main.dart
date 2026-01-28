@@ -81,7 +81,8 @@ void main() async {
   // Initialize AI service
   final localMLService = LocalMLService();
   final localNLPService = LocalNlpService();
-  final aiService = AIService(localMLService, localNLPService, settingsRepo);
+  final aiService =
+      AIService(localMLService, localNLPService, settingsRepo, taskRepo);
   try {
     await aiService.init();
   } catch (e) {
