@@ -16,7 +16,7 @@ class AppConstants {
 
   // Backend Configuration
   static const String backendBaseUrl =
-      'https://task-master-backend-qupx.onrender.com';
+      'https://charming-leesa-techzparag-8c30a683.koyeb.app';
   static const String dataCollectionServerUrl = '$backendBaseUrl/collect';
 
   // Default Categories
