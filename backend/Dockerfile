@@ -21,7 +21,8 @@ COPY start.sh .
 RUN chmod +x start.sh
 
 # Environment variables
-ENV PORT=8000
-ENV OLLAMA_HOST=0.0.0.0
+ENV PORT=10000
+ENV OLLAMA_HOST=127.0.0.1
+ENV OLLAMA_MAX_LOADED_MODELS=1
 
 CMD ["./start.sh"]

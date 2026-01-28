@@ -24,7 +24,7 @@ from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.docstore.document import Document
 
 # --- Configuration ---
-MODEL_NAME = os.getenv("AI_MODEL", "llama3") 
+MODEL_NAME = os.getenv("AI_MODEL", "phi3:mini") 
 EMBED_MODEL = os.getenv("AI_EMBED_MODEL", "nomic-embed-text")
 
 app = FastAPI(title="Task Master AI Backend")
@@ -206,5 +206,6 @@ async def chat_endpoint(request: ChatRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 if __name__ == "__main__":
+    port = int(os.getenv("PORT", 8000))
     # Host 0.0.0.0 is crucial for local network access
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run(app, host="0.0.0.0", port=port)
