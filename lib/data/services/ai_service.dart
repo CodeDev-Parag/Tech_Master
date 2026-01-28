@@ -432,18 +432,31 @@ class AIService extends ChangeNotifier {
           await client.send(request).timeout(const Duration(seconds: 15));
 
       if (response.statusCode == 200) {
+        bool yieldedAny = false;
         await for (var line in response.stream
             .transform(utf8.decoder)
             .transform(const LineSplitter())) {
-          if (line.trim().isEmpty) continue;
+          final trimmedLine = line.trim();
+          if (trimmedLine.isEmpty) continue;
+
+          print('DEBUG: Received cloud line: $trimmedLine');
           try {
-            final data = json.decode(line);
-            if (data.containsKey('token')) {
-              yield data['token'];
+            final data = json.decode(trimmedLine);
+            if (data is Map && data.containsKey('token')) {
+              final token = data['token'] as String;
+              if (token.isNotEmpty) {
+                yield token;
+                yieldedAny = true;
+              }
             }
           } catch (e) {
-            print('DEBUG: Error parsing chat stream line: $e');
+            print(
+                'DEBUG: Error parsing chat stream line: $e | Line: $trimmedLine');
           }
+        }
+        if (!yieldedAny) {
+          print('DEBUG: Cloud stream finished with no tokens yielded.');
+          yield "Cloud AI connected but returned no content. Please try again or add more tasks/notes for context.";
         }
       } else if (response.statusCode == 503) {
         yield "AI is waking up on Render. Please try again in 30 seconds...";

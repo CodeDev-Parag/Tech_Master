@@ -24,7 +24,7 @@ from langchain_core.documents import Document
 
 # --- Configuration ---
 MODEL_NAME = os.getenv("AI_MODEL", "gemini-2.0-flash") 
-EMBED_MODEL = os.getenv("AI_EMBED_MODEL", "text-embedding-004")
+EMBED_MODEL = os.getenv("AI_EMBED_MODEL", "models/embedding-001")
 GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
 
 if not GOOGLE_API_KEY:
@@ -221,6 +221,7 @@ async def chat_endpoint(request: ChatRequest):
     """
     Standard RAG Chat with Streaming.
     """
+    print(f"DEBUG: Chat request received: {request.message[:50]}...")
     try:
         # 1. Retrieve relevant docs
         retriever = get_vector_store().as_retriever(search_kwargs={"k": request.context_window})
@@ -235,8 +236,27 @@ async def chat_endpoint(request: ChatRequest):
         
         # 3. Stream Generator
         async def response_generator():
-            async for chunk in rag_chain.astream(request.message):
-                yield json.dumps({"token": chunk}) + "\n"
+            yielded_any = False
+            try:
+                # 3a. Initial signal to confirm stream start
+                # yield json.dumps({"token": "[CONNECTED]"}) + "\n"
+                
+                async for chunk in rag_chain.astream(request.message):
+                    if chunk:
+                        yielded_any = True
+                        print(f"DEBUG: Yielding chunk: {chunk[:20]}...")
+                        # Ensure we don't send empty strings as tokens
+                        if chunk.strip():
+                             yield json.dumps({"token": chunk}) + "\n"
+                
+                if not yielded_any:
+                    print("DEBUG: No tokens yielded from RAG chain.")
+                    yield json.dumps({"token": "I've connected to the knowledge base, but I couldn't generate a specific response for that. Could you try rephrasing or adding more details to your tasks/notes?"}) + "\n"
+            except Exception as e:
+                print(f"DEBUG: Error in response generator: {e}")
+                import traceback
+                traceback.print_exc()
+                yield json.dumps({"token": f"Error during generation: {str(e)}"}) + "\n"
 
         return StreamingResponse(response_generator(), media_type="application/x-ndjson")
 
