@@ -14,9 +14,10 @@ class AppConstants {
   static const String themeMode = 'theme_mode';
   static const String notificationsEnabled = 'notifications_enabled';
 
-  // Data Collection Backend URL (10.0.2.2 is localhost for Android Emulator)
-  static const String dataCollectionServerUrl =
-      'https://task-master-backend-qupx.onrender.com/collect';
+  // Backend Configuration
+  static const String backendBaseUrl =
+      'https://task-master-backend-qupx.onrender.com';
+  static const String dataCollectionServerUrl = '$backendBaseUrl/collect';
 
   // Default Categories
   static const List<Map<String, dynamic>> defaultCategories = [

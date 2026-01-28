@@ -42,4 +42,11 @@ class SettingsRepository {
   Future<void> setUseCustomServer(bool enabled) async {
     await _box.put(keyUseCustomServer, enabled);
   }
+
+  // Pro Mode
+  static const String keyProMode = 'pro_mode';
+  bool get isProMode => _box.get(keyProMode, defaultValue: false);
+  Future<void> setProMode(bool enabled) async {
+    await _box.put(keyProMode, enabled);
+  }
 }

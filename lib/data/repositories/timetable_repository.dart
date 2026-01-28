@@ -1,12 +1,7 @@
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import '../../core/services/notification_service.dart';
 import '../models/timetable.dart';
 import '../repositories/attendance_repository.dart';
-
-final timetableRepositoryProvider = Provider<TimetableRepository>((ref) {
-  throw UnimplementedError('Provider not initialized');
-});
 
 class TimetableRepository {
   static const String _boxName = 'timetable_box';

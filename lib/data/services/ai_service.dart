@@ -55,8 +55,16 @@ class AIService extends ChangeNotifier {
 
   // Legacy stubs for compatibility
   Future<void> initializeLLM(String modelPath) async {}
-  Future<bool> checkServerHealth() async => true;
-  Future<void> syncData(List<Task> tasks, List<Note> notes) async {}
+  Future<bool> checkServerHealth() async {
+    return true; // Always true in purely local mode
+  }
+
+  Future<void> syncData(List<Task> tasks, List<Note> notes) async {
+    // In local-only mode, we just ensure the local ML model is trained.
+    // We do not send data to any backend.
+    await trainModel(tasks);
+    print('DEBUG: Local AI model updated with ${tasks.length} tasks.');
+  }
 
   Future<void> trainModel(List<Task> tasks) async {
     await _mlService.train(tasks);
@@ -76,34 +84,211 @@ class AIService extends ChangeNotifier {
     return 'Good Night';
   }
 
-  /// Chat response using local NLP engine
-  Future<String> chat(String message, {String? context}) async {
+  /// Chat response - Fully Local
+  /// Chat response - Fully Local
+  Future<String> chat(String message,
+      {List<Task> tasks = const [],
+      List<Note> notes = const [],
+      List<dynamic> sessions = const [],
+      bool isProMode = false}) async {
     if (!_nlpService.isInitialized) await _nlpService.init();
-
     final timeGreeting = _getTimeGreeting();
-
-    // Greeting/Generic handling
     final lower = message.toLowerCase();
+
+    // 1. Greeting
     if (lower.contains('hello') ||
-        lower.contains('hi') ||
+        lower.contains('hi ') ||
+        lower == 'hi' ||
         lower.contains('hey')) {
-      return "$timeGreeting! I am your Local Productivity Architect. I'm powered by a custom productivity knowledge base to help you optimize your workflow offline. No data leaves your device. How can I help you architect your success today?";
+      if (isProMode) {
+        return "$timeGreeting! I am your Local Productivity Architect. I have full access to your ${tasks.length} tasks, ${notes.length} notes and ${sessions.length} scheduled classes. How can I help you organize today?";
+      } else {
+        return "$timeGreeting! I am your Local AI Assistant. I can help you manage tasks and notes. Unlock Pro Mode for advanced daily planning capabilities.";
+      }
     }
 
-    // Predictive Intent Matching
+    // 2. Schedule Planning (Pro Mode)
+    if ((lower.contains('plan') &&
+            (lower.contains('day') || lower.contains('schedule'))) ||
+        (lower.contains('productivity') && lower.contains('increase'))) {
+      if (!isProMode) {
+        return "This is a Pro Mode feature. Please unlock Pro Mode in Settings to enable advanced schedule planning and productivity optimization.";
+      }
+
+      if (sessions.isEmpty && tasks.isEmpty) {
+        return "I can help you plan, but I need some data first. Try adding your timetable or some tasks.";
+      }
+
+      final now = DateTime.now();
+
+      // Simple algorithm: Find gaps between classes and fill with tasks
+      final List<String> plan = [];
+      plan.add("Here is a productivity plan for the rest of your day:");
+
+      int currentHour = now.hour;
+      if (currentHour < 8) currentHour = 8; // Start day at 8 AM if early
+      if (currentHour > 20)
+        return "The day is almost over! Take some rest and plan for tomorrow.";
+
+      // Sort items by time
+      // This is a simplified "Pro" algorithm
+      for (int i = currentHour; i < 21; i++) {
+        final hourStart = i;
+        final hourEnd = i + 1;
+
+        // Check if busy with class
+        final busyClass = sessions.firstWhere((s) {
+          // Assuming s has startTimeHour property (dynamic check)
+          return s.startTimeHour <= i && s.endTimeHour > i;
+        }, orElse: () => null);
+
+        if (busyClass != null) {
+          plan.add(
+              "• **$hourStart:00 - $hourEnd:00**: Attend Class: ${busyClass.subjectName}");
+        } else {
+          // Free slot!
+          // Find a task
+          final task = tasks.firstWhere(
+              (t) =>
+                  t.status != TaskStatus.completed &&
+                  (t.priority == Priority.high ||
+                      t.priority == Priority.urgent),
+              orElse: () => Task(
+                  id: 'temp',
+                  title: 'Review notes or take a break',
+                  status: TaskStatus.pending,
+                  createdAt: DateTime.now(),
+                  updatedAt: DateTime.now(),
+                  checklist: [],
+                  priority: Priority.low) // Dummy
+              );
+
+          if (task.id != 'temp') {
+            plan.add(
+                "• **$hourStart:00 - $hourEnd:00**: Work on \"${task.title}\" (High Priority)");
+          } else {
+            plan.add(
+                "• **$hourStart:00 - $hourEnd:00**: Deep Work / Study Session or Review Notes");
+          }
+        }
+      }
+
+      return plan.join('\n');
+    }
+
+    // 3. Data Queries (Task Awareness)
+    if (lower.contains('task') ||
+        lower.contains('todo') ||
+        lower.contains('doing')) {
+      if (tasks.isEmpty) {
+        return "You don't have any tasks right now. Try adding one!";
+      }
+
+      if (lower.contains('high') || lower.contains('urgent')) {
+        final highPriority = tasks
+            .where((t) =>
+                t.status != TaskStatus.completed &&
+                (t.priority == Priority.high || t.priority == Priority.urgent))
+            .take(5)
+            .toList();
+
+        if (highPriority.isEmpty) {
+          return "Good news! You have no pending high-priority tasks.";
+        } else {
+          final list = highPriority
+              .map((t) => "• ${t.title} (${t.priority.name})")
+              .join('\n');
+          return "Here are your top priority tasks:\n$list";
+        }
+      }
+
+      if (lower.contains('overdue')) {
+        final now = DateTime.now();
+        final overdue = tasks
+            .where((t) =>
+                t.status != TaskStatus.completed &&
+                t.dueDate != null &&
+                t.dueDate!.isBefore(now))
+            .take(5)
+            .toList();
+
+        if (overdue.isEmpty) return "You're on track! No overdue tasks.";
+        final list = overdue
+            .map((t) =>
+                "• ${t.title} (Due: ${t.dueDate.toString().split(' ')[0]})")
+            .join('\n');
+        return "You have these overdue tasks:\n$list";
+      }
+
+      // General pending tasks summary
+      final pending =
+          tasks.where((t) => t.status != TaskStatus.completed).take(5).toList();
+      final list = pending.map((t) => "• ${t.title}").join('\n');
+      return "You have ${tasks.where((t) => t.status != TaskStatus.completed).length} pending tasks. Here are the next few:\n$list";
+    }
+
+    // 4. Data Queries (Note Awareness)
+    if (lower.contains('note') ||
+        lower.contains('remember') ||
+        lower.contains('summary')) {
+      if (notes.isEmpty) return "Your notebook is empty.";
+
+      // Keyword search in notes
+      final keywords = lower
+          .replaceAll('note', '')
+          .replaceAll('show', '')
+          .replaceAll('find', '')
+          .replaceAll('about', '')
+          .trim()
+          .split(' ');
+
+      if (keywords.first.isNotEmpty) {
+        final matches = notes
+            .where((n) {
+              return keywords.any((k) =>
+                  n.content.toLowerCase().contains(k) ||
+                  n.title.toLowerCase().contains(k));
+            })
+            .take(3)
+            .toList();
+
+        if (matches.isNotEmpty) {
+          final list = matches
+              .map((n) => "• **${n.title}**: ${_truncate(n.content, 50)}")
+              .join('\n');
+          return "I found these notes related to your query:\n$list";
+        }
+      }
+
+      // Default notes summary
+      return "You have ${notes.length} notes. Ask me about a specific topic!";
+    }
+
+    // 5. Fallback to NLP Intent Prediction
     final intentKey = _nlpService.predictIntent(message);
     return _nlpService.getResponse(intentKey);
   }
 
-  /// Streaming chat response using simulated typing
-  Stream<String> chatStream(String message, {bool isLocalMode = true}) async* {
-    final fullResponse = await chat(message);
+  String _truncate(String text, int length) {
+    if (text.length <= length) return text;
+    return "${text.substring(0, length)}...";
+  }
 
-    // Simulate typing effect for a premium feel
+  /// Streaming chat response - Simulates typing for local feel
+  Stream<String> chatStream(String message,
+      {List<Task> tasks = const [],
+      List<Note> notes = const [],
+      List<dynamic> sessions = const [],
+      bool isProMode = false}) async* {
+    // Calculate response synchronously first
+    final fullResponse = await chat(message,
+        tasks: tasks, notes: notes, sessions: sessions, isProMode: isProMode);
+
+    // Stream it
     final words = fullResponse.split(' ');
-    for (final word in words) {
+    for (var i = 0; i < words.length; i++) {
       await Future.delayed(const Duration(milliseconds: 30));
-      yield "$word ";
+      yield "${words[i]} ";
     }
   }
 

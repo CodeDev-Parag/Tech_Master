@@ -83,9 +83,14 @@ class _NotesScreenState extends ConsumerState<NotesScreen> {
       ),
       child: ListTile(
         contentPadding: const EdgeInsets.all(16),
-        title: Text(
-          note.title,
-          style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 18),
+        title: Tooltip(
+          message: note.title,
+          child: Text(
+            note.title,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 18),
+          ),
         ),
         subtitle: Column(
           crossAxisAlignment: CrossAxisAlignment.start,

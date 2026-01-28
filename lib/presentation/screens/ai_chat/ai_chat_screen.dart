@@ -41,7 +41,7 @@ class _AIChatScreenState extends ConsumerState<AIChatScreen> {
 
     try {
       final aiService = ref.read(aiServiceProvider);
-      final isLocalMode = ref.read(aiModeProvider);
+      // final isLocalMode = ref.read(aiModeProvider); // Removed: Always local
 
       // Heuristic: Check if it looks like a task creation or planning request
       final lowerText = text.toLowerCase();
@@ -92,8 +92,23 @@ class _AIChatScreenState extends ConsumerState<AIChatScreen> {
           _messages.add(ChatMessage(text: "", isUser: false));
         });
 
-        // 2. Stream response
-        final stream = aiService.chatStream(text, isLocalMode: isLocalMode);
+        // 2. Stream response with local data injection
+        final tasks = ref.read(tasksProvider);
+        final notes = ref.read(notesProvider);
+        final isProMode = ref.read(proModeProvider);
+
+        var todaySessions = <dynamic>[];
+        try {
+          final timetableRepo = ref.read(timetableRepositoryProvider);
+          todaySessions =
+              timetableRepo.getSortedSessionsForDay(DateTime.now().weekday);
+        } catch (_) {}
+
+        final stream = aiService.chatStream(text,
+            tasks: tasks,
+            notes: notes,
+            sessions: todaySessions,
+            isProMode: isProMode);
         final StringBuffer buffer = StringBuffer();
 
         await for (final chunk in stream) {
@@ -139,9 +154,23 @@ class _AIChatScreenState extends ConsumerState<AIChatScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(
-          'AI Assistant',
-          style: GoogleFonts.inter(fontWeight: FontWeight.w600),
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'AI Assistant',
+              style:
+                  GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 16),
+            ),
+            Text(
+              'Local Intelligence (Offline)',
+              style: GoogleFonts.inter(
+                fontSize: 10,
+                color: theme.colorScheme.primary,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
         ),
         actions: [
           IconButton(
@@ -150,7 +179,7 @@ class _AIChatScreenState extends ConsumerState<AIChatScreen> {
                 _messages.clear();
               });
             },
-            icon: const Icon(Iconsax.trash),
+            icon: const Icon(Iconsax.trash, size: 20),
             tooltip: 'Clear Chat',
           )
         ],

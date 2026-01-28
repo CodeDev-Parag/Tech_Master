@@ -13,6 +13,8 @@ import '../../data/repositories/note_repository.dart';
 import '../../data/services/note_export_service.dart';
 import '../../data/repositories/settings_repository.dart';
 import '../../data/services/local_nlp_service.dart';
+import '../../data/repositories/timetable_repository.dart';
+import '../../data/models/timetable.dart';
 
 // Repository providers
 final taskRepositoryProvider = Provider<TaskRepository>((ref) {
@@ -38,6 +40,27 @@ final settingsRepositoryProvider = Provider<SettingsRepository>((ref) {
 final localMLServiceProvider = Provider<LocalMLService>((ref) {
   return LocalMLService();
 });
+
+final timetableRepositoryProvider = Provider<TimetableRepository>((ref) {
+  return TimetableRepository();
+});
+
+final timetableProvider =
+    StateNotifierProvider<TimetableNotifier, List<ClassSession>>((ref) {
+  return TimetableNotifier(ref.watch(timetableRepositoryProvider));
+});
+
+class TimetableNotifier extends StateNotifier<List<ClassSession>> {
+  final TimetableRepository _repository;
+
+  TimetableNotifier(this._repository) : super([]) {
+    loadSessions();
+  }
+
+  void loadSessions() {
+    state = _repository.getAllSessions();
+  }
+}
 
 final aiServiceProvider = ChangeNotifierProvider<AIService>((ref) {
   final mlService = ref.watch(localMLServiceProvider);
@@ -118,10 +141,15 @@ class TasksNotifier extends StateNotifier<List<Task>> {
   }
 
   void _triggerLearning() {
-    // Re-train Local Model with current tasks to ensure personalization
+    // Re-train Local Model
     final tasks = state;
+    final notes = _ref.read(notesProvider);
     final aiService = _ref.read(aiServiceProvider);
+
     aiService.trainModel(tasks);
+
+    // Sync to Cloud for RAG (Fast AI)
+    aiService.syncData(tasks, notes);
   }
 
   List<Task> filterByStatus(TaskStatus status) {
@@ -233,6 +261,20 @@ class ServerIpNotifier extends StateNotifier<String> {
   }
 }
 
+final proModeProvider = StateNotifierProvider<ProModeNotifier, bool>((ref) {
+  return ProModeNotifier(ref.watch(settingsRepositoryProvider));
+});
+
+class ProModeNotifier extends StateNotifier<bool> {
+  final SettingsRepository _repo;
+  ProModeNotifier(this._repo) : super(_repo.isProMode);
+
+  void toggle(bool enabled) {
+    state = enabled;
+    _repo.setProMode(enabled);
+  }
+}
+
 final customServerModeProvider =
     StateNotifierProvider<CustomServerModeNotifier, bool>((ref) {
   return CustomServerModeNotifier(ref.watch(settingsRepositoryProvider));
@@ -250,13 +292,14 @@ class CustomServerModeNotifier extends StateNotifier<bool> {
 
 // Note providers
 final notesProvider = StateNotifierProvider<NotesNotifier, List<Note>>((ref) {
-  return NotesNotifier(ref.watch(noteRepositoryProvider));
+  return NotesNotifier(ref.watch(noteRepositoryProvider), ref);
 });
 
 class NotesNotifier extends StateNotifier<List<Note>> {
   final NoteRepository _repository;
+  final Ref _ref;
 
-  NotesNotifier(this._repository) : super([]) {
+  NotesNotifier(this._repository, this._ref) : super([]) {
     loadNotes();
   }
 
@@ -267,15 +310,25 @@ class NotesNotifier extends StateNotifier<List<Note>> {
   Future<void> addNote(Note note) async {
     await _repository.addNote(note);
     loadNotes();
+    _triggerSync();
   }
 
   Future<void> updateNote(Note note) async {
     await _repository.updateNote(note);
     loadNotes();
+    _triggerSync();
   }
 
   Future<void> deleteNote(String id) async {
     await _repository.deleteNote(id);
     loadNotes();
+    _triggerSync();
+  }
+
+  void _triggerSync() {
+    final tasks = _ref.read(tasksProvider);
+    final notes = state;
+    final aiService = _ref.read(aiServiceProvider);
+    aiService.syncData(tasks, notes);
   }
 }

@@ -36,8 +36,37 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
             const SizedBox(height: 24),
 
-            // What's New Card
             _buildWhatsNewCard(theme),
+            const SizedBox(height: 24),
+
+            // Pro Features Section (New)
+            _sectionHeader('Pro Features', theme),
+            const SizedBox(height: 12),
+            _settingsCard(
+              theme,
+              children: [
+                _settingsTile(
+                  theme,
+                  icon: Iconsax.crown,
+                  iconColor: Colors.amber,
+                  title: 'Unlock Pro Mode',
+                  subtitle: 'Advanced AI Planning & Schedule Awareness',
+                  trailing: Switch(
+                    value: ref.watch(proModeProvider),
+                    onChanged: (value) {
+                      ref.read(proModeProvider.notifier).toggle(value);
+                      if (value) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                              content: Text(
+                                  'Pro Mode Unlocked! Try asking "Plan my day".')),
+                        );
+                      }
+                    },
+                  ),
+                ),
+              ],
+            ).animate().fadeIn(delay: 50.ms).slideY(begin: 0.1),
             const SizedBox(height: 24),
 
             // Appearance Section
