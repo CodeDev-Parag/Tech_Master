@@ -13,8 +13,9 @@ import '../../providers/providers.dart';
 
 class AddTaskScreen extends ConsumerStatefulWidget {
   final Task? editTask;
+  final DateTime? initialDate;
 
-  const AddTaskScreen({super.key, this.editTask});
+  const AddTaskScreen({super.key, this.editTask, this.initialDate});
 
   @override
   ConsumerState<AddTaskScreen> createState() => _AddTaskScreenState();
@@ -45,6 +46,8 @@ class _AddTaskScreenState extends ConsumerState<AddTaskScreen> {
     if (widget.editTask != null) {
       _loadEditTask();
       _isNaturalInput = false;
+    } else if (widget.initialDate != null) {
+      _dueDate = widget.initialDate;
     }
   }
 

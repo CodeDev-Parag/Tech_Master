@@ -15,6 +15,7 @@ import '../../data/repositories/settings_repository.dart';
 import '../../data/services/local_nlp_service.dart';
 import '../../data/repositories/timetable_repository.dart';
 import '../../data/models/timetable.dart';
+import '../../core/services/notification_service.dart';
 
 // Repository providers
 final taskRepositoryProvider = Provider<TaskRepository>((ref) {
@@ -107,18 +108,31 @@ class TasksNotifier extends StateNotifier<List<Task>> {
 
   Future<void> addTask(Task task) async {
     await _repository.addTask(task);
+    if (task.reminderTime != null && task.reminderTime!.isAfter(DateTime.now())) {
+      await NotificationService.scheduleTaskNotification(
+          task.id, task.title, task.reminderTime!);
+    }
     loadTasks();
     _triggerLearning();
   }
 
   Future<void> updateTask(Task task) async {
     await _repository.updateTask(task);
+    // Cancel existing and reschedule
+    await NotificationService.cancelTaskNotification(task.id);
+    if (task.reminderTime != null &&
+        task.status != TaskStatus.completed &&
+        task.reminderTime!.isAfter(DateTime.now())) {
+      await NotificationService.scheduleTaskNotification(
+          task.id, task.title, task.reminderTime!);
+    }
     loadTasks();
     _triggerLearning();
   }
 
   Future<void> deleteTask(String id) async {
     await _repository.deleteTask(id);
+    await NotificationService.cancelTaskNotification(id);
     loadTasks();
     _triggerLearning();
   }
@@ -130,7 +144,13 @@ class TasksNotifier extends StateNotifier<List<Task>> {
     // Check if the task was just completed
     final task = state.firstWhere((t) => t.id == id);
     if (task.status == TaskStatus.completed) {
+      await NotificationService.cancelTaskNotification(id);
       _ref.read(gamificationServiceProvider.notifier).completeTask();
+    } else if (task.reminderTime != null &&
+        task.reminderTime!.isAfter(DateTime.now())) {
+      // Reschedule if un-completed and has future reminder
+      await NotificationService.scheduleTaskNotification(
+          task.id, task.title, task.reminderTime!);
     }
 
     _triggerLearning();

@@ -141,4 +141,32 @@ class NotificationService {
   static Future<void> cancelSessionNotification(String sessionId) async {
     await flutterLocalNotificationsPlugin.cancel(sessionId.hashCode);
   }
+
+  // Task Notifications
+  static Future<void> scheduleTaskNotification(
+      String taskId, String title, DateTime reminderTime) async {
+    // Basic task notification
+    await flutterLocalNotificationsPlugin.zonedSchedule(
+      taskId.hashCode,
+      'Task Reminder',
+      title,
+      tz.TZDateTime.from(reminderTime, tz.local),
+      const NotificationDetails(
+        android: AndroidNotificationDetails(
+          'task_channel',
+          'Task Notifications',
+          channelDescription: 'Reminders for your tasks',
+          importance: Importance.max,
+          priority: Priority.high,
+        ),
+      ),
+      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+      uiLocalNotificationDateInterpretation:
+          UILocalNotificationDateInterpretation.absoluteTime,
+    );
+  }
+
+  static Future<void> cancelTaskNotification(String taskId) async {
+    await flutterLocalNotificationsPlugin.cancel(taskId.hashCode);
+  }
 }

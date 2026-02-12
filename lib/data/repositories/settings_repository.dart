@@ -56,4 +56,10 @@ class SettingsRepository {
   Future<void> setCollegeMode(bool enabled) async {
     await _box.put(keyCollegeMode, enabled);
   }
+  // What's New Card
+  static const String keyShowWhatsNew = 'show_whats_new_2_1_5';
+  bool get showWhatsNew => _box.get(keyShowWhatsNew, defaultValue: true);
+  Future<void> setShowWhatsNew(bool show) async {
+    await _box.put(keyShowWhatsNew, show);
+  }
 }

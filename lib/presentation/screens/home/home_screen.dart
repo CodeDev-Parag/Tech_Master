@@ -12,6 +12,7 @@ import '../../widgets/task_card.dart';
 import '../../widgets/stats_card.dart';
 import '../../widgets/ai_insight_card.dart';
 import '../../widgets/motivation_card.dart';
+import '../../widgets/whats_new_card.dart';
 import '../task_list/task_list_screen.dart';
 import '../add_task/add_task_screen.dart';
 import '../focus/focus_screen.dart';
@@ -20,6 +21,7 @@ import '../ai_chat/ai_chat_screen.dart';
 import '../profile/profile_screen.dart';
 import '../notes/notes_screen.dart';
 import '../procrastination/procrastination_screen.dart';
+import '../calendar/calendar_screen.dart';
 
 import '../../../data/repositories/timetable_repository.dart';
 import '../college/attendance_screen.dart';
@@ -46,7 +48,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           _HomeTab(),
           TaskListScreen(),
           AIChatScreen(),
-          FocusScreen(),
+          CalendarScreen(), // Replaced FocusScreen
           SettingsScreen(),
         ],
       ),
@@ -83,7 +85,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               _navItem(Iconsax.home_2, 'Home', 0, theme),
               _navItem(Iconsax.task_square, 'Tasks', 1, theme),
               _navItem(Iconsax.message_text, 'AI Chat', 2, theme),
-              _navItem(Iconsax.timer_1, 'Focus', 3, theme),
+              _navItem(Iconsax.calendar_1, 'Calendar', 3, theme), // Changed Icon and Label
               _navItem(Iconsax.setting_2, 'Settings', 4, theme),
             ],
           ),
@@ -208,6 +210,11 @@ class _HomeTab extends ConsumerWidget {
             ),
           ),
 
+          // What's New Card
+          SliverToBoxAdapter(
+            child: const WhatsNewCard().animate().fadeIn().slideY(begin: -0.1),
+          ),
+
           // Quick Stats
           SliverToBoxAdapter(
             child: Padding(
@@ -274,6 +281,21 @@ class _HomeTab extends ConsumerWidget {
                 children: [
                   Padding(
                     padding: const EdgeInsets.only(left: 20, right: 8),
+                    child: _QuickActionCard(
+                      title: 'Focus Timer',
+                      description:
+                          'Stay productive with Pomodoro timer & background sounds.',
+                      icon: Iconsax.timer_1,
+                      color: Colors.tealAccent,
+                      onTap: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (context) => const FocusScreen()),
+                      ),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
                     child: _QuickActionCard(
                       title: 'My Notes',
                       description:
@@ -591,10 +613,8 @@ class _QuickActionCard extends StatelessWidget {
       onTap: onTap,
       borderRadius: BorderRadius.circular(24),
       child: Container(
-        padding: const EdgeInsets.all(24), // More padding for "full" look
+        padding: const EdgeInsets.all(24),
         decoration: BoxDecoration(
-            // Use a gradient or solid color based on preference.
-            // Solid surface with accent borders/icons is cleaner.
             color: theme.cardColor,
             borderRadius: BorderRadius.circular(24),
             border:
@@ -632,7 +652,7 @@ class _QuickActionCard extends StatelessWidget {
               overflow: TextOverflow.visible,
               style: GoogleFonts.inter(
                 fontWeight: FontWeight.w700,
-                fontSize: 20, // Larger title
+                fontSize: 20,
               ),
             ),
             const SizedBox(height: 8),

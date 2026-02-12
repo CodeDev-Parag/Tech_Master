@@ -129,6 +129,15 @@ class _AIChatScreenState extends ConsumerState<AIChatScreen> {
           _scrollToBottom();
         }
 
+        if (buffer.isEmpty) {
+          setState(() {
+            _messages.last = ChatMessage(
+                text: "No response from AI. Please check your connection.",
+                isUser: false,
+                isError: true);
+          });
+        }
+
         setState(() {
           _isTyping = false;
         });
@@ -172,7 +181,9 @@ class _AIChatScreenState extends ConsumerState<AIChatScreen> {
                   GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 16),
             ),
             Text(
-              'Local Intelligence (Offline)',
+              ref.watch(aiModeProvider)
+                  ? 'Local Intelligence (Offline)'
+                  : 'Cloud AI (Gemini)',
               style: GoogleFonts.inter(
                 fontSize: 10,
                 color: theme.colorScheme.primary,
